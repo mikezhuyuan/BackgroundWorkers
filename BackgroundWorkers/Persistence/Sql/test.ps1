@@ -1,0 +1,2 @@
+﻿[System.Reflection.Assembly]::LoadFrom("\src\inprotechkaizen\backgroundworkers\bin\debug\backgroundworkers.dll")
+[BackgroundWorkers.Persistence.Sql.WorkItemsTable]::Create("Data Source=.;Initial Catalog=UsptoIntegration;Integrated Security=True")
