@@ -53,7 +53,7 @@ namespace BackgroundWorkers
                     if (!ar.CompletedSynchronously)
                         break;
 
-                    if (!ShouldPump())
+                    if (!AcquirePump())
                         break;
                 }
             }
@@ -104,7 +104,7 @@ namespace BackgroundWorkers
 
                     handler.Dispose();
 
-                    if (ShouldPump())
+                    if (AcquirePump())
                         Pump();
 
                 }, TaskContinuationOptions.ExecuteSynchronously);
@@ -121,7 +121,7 @@ namespace BackgroundWorkers
             }
             finally
             {
-                if (!ar.CompletedSynchronously && shouldContinue && ShouldPump(handlerTask == null))
+                if (!ar.CompletedSynchronously && shouldContinue && AcquirePump(handlerTask == null))
                     Pump();
             }
         }
@@ -135,7 +135,7 @@ namespace BackgroundWorkers
             }
         }
 
-        bool ShouldPump(bool canRelease = true)
+        bool AcquirePump(bool canRelease = true)
         {
             lock (_sync)
             {

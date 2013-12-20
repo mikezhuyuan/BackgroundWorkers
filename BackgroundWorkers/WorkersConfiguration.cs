@@ -6,11 +6,11 @@ using BackgroundWorkers.Persistence;
 
 namespace BackgroundWorkers
 {
-    public class Configuration
+    public class WorkersConfiguration
     {
-        static readonly Configuration CurrentConfig = new Configuration();
+        static readonly WorkersConfiguration CurrentConfig = new WorkersConfiguration();
 
-        public Configuration()
+        public WorkersConfiguration()
         {
             MessageFormatter = new MessageFormatter();
             Logger = new ConsoleLogger();
@@ -81,53 +81,53 @@ namespace BackgroundWorkers
         }
 
 
-        public Configuration UseLogger(ILogger logger)
+        public WorkersConfiguration UseLogger(ILogger logger)
         {
             if (logger == null) throw new ArgumentNullException("logger");
             Logger = logger;
             return this;
         }
 
-        public Configuration UseFormatter(IMessageFormatter formatter)
+        public WorkersConfiguration UseFormatter(IMessageFormatter formatter)
         {
             if (formatter == null) throw new ArgumentNullException("formatter");
             MessageFormatter = formatter;
             return this;
         }
 
-        public Configuration UseDependencyResolver(IDependencyResolver dependencyResolver)
+        public WorkersConfiguration UseDependencyResolver(IDependencyResolver dependencyResolver)
         {
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
             DependencyResolver = dependencyResolver;
             return this;
         }
 
-        public Configuration UseWorkItemRepositoryProvider(IWorkItemRepositoryProvider provider)
+        public WorkersConfiguration UseWorkItemRepositoryProvider(IWorkItemRepositoryProvider provider)
         {
             if (provider == null) throw new ArgumentNullException("provider");
             WorkItemRepositoryProvider = provider;
             return this;
         }
 
-        public Configuration WithQueue(string name, int maxWorkers = 1)
+        public WorkersConfiguration WithQueue(string name, int maxWorkers = 1)
         {
             Queues.Add(new QueueConfiguration(name, maxWorkers));
             return this;
         }
 
-        public Configuration WithRetryDelay(TimeSpan delay)
+        public WorkersConfiguration WithRetryDelay(TimeSpan delay)
         {
             RetryDelay = RetryDelay;
             return this;
         }
 
-        public Configuration WithRetryCount(int count)
+        public WorkersConfiguration WithRetryCount(int count)
         {
             RetryCount = count;
             return this;
         }
 
-        public static Configuration Current
+        public static WorkersConfiguration Current
         {
             get { return CurrentConfig; }
         }

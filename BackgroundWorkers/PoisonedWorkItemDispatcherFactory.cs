@@ -4,9 +4,9 @@ namespace BackgroundWorkers
 {
     public class PoisonedWorkItemDispatcherFactory : IHandleRawMessageFactory<Guid>
     {
-        readonly Configuration _configuration;
+        readonly WorkersConfiguration _configuration;
 
-        public PoisonedWorkItemDispatcherFactory(Configuration configuration)
+        public PoisonedWorkItemDispatcherFactory(WorkersConfiguration configuration)
         {
             if (configuration == null) throw new ArgumentNullException("configuration");
             _configuration = configuration;

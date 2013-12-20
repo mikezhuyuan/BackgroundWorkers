@@ -5,9 +5,9 @@ namespace BackgroundWorkers
 {
     public class NewWorkItemDispatcherFactory : IHandleRawMessageFactory<NewWorkItem>
     {
-        readonly Configuration _configuration;
+        readonly WorkersConfiguration _configuration;
 
-        public NewWorkItemDispatcherFactory(Configuration configuration)
+        public NewWorkItemDispatcherFactory(WorkersConfiguration configuration)
         {
             if (configuration == null) throw new ArgumentNullException("configuration");
             _configuration = configuration;

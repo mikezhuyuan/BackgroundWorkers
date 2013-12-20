@@ -90,7 +90,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WorkItem.cs" />
     <Compile Include="WorkItemDispatcher.cs" />
-    <Compile Include="Configuration.cs" />
+    <Compile Include="WorkersConfiguration.cs" />
     <Compile Include="WorkItemDispatcherException.cs" />
     <Compile Include="NewWorkItemDispatcher.cs" />
     <Compile Include="WorkItemDispatcherFactory.cs" />

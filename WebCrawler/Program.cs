@@ -12,20 +12,20 @@ namespace WebCrawler
         static void Main(string[] args)
         {
 
-            Configuration.Current
+            WorkersConfiguration.Current
                 .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
-                .WithQueue("WebCrawler", 2)
+                .WithQueue("WebCrawler", 10)
                 .CreateHost().Start();
 
             Console.WriteLine("Enter the URL to start");
             var url = Console.ReadLine();
 
             using (var scope = new TransactionScope())
-            using(var client = Configuration.Current.CreateClient())
+            using(var client = WorkersConfiguration.Current.CreateClient())
             {
-                //client.Enqueue(new UrlMessage { Url = url });
-                client.Enqueue(new DummyMessage());
-                client.Enqueue(new DummyMessage());
+                client.Enqueue(new UrlMessage { Url = url });
+                //client.Enqueue(new DummyMessage());
+                //client.Enqueue(new DummyMessage());
                 //client.Enqueue(new DummyMessage());
                 scope.Complete();
             }
