@@ -73,11 +73,11 @@ namespace BackgroundWorkers
 
             var shouldContinue = true;
 
+            Task handlerTask = null;
             try
             {
                 _queue.EndPeek(ar);
 
-                Task handlerTask;
                 var handler = _func();
                     
                 using (var scope = new TransactionScope())
@@ -92,7 +92,6 @@ namespace BackgroundWorkers
                 if (handlerTask == null) 
                     return;
                 
-                shouldContinue = false;
                 handlerTask.ContinueWith(t =>
                 {
                     if (t.IsFaulted)
@@ -122,7 +121,7 @@ namespace BackgroundWorkers
             }
             finally
             {
-                if (!ar.CompletedSynchronously && shouldContinue && ShouldPump())
+                if (!ar.CompletedSynchronously && shouldContinue && ShouldPump(handlerTask == null))
                     Pump();
             }
         }
@@ -136,19 +135,29 @@ namespace BackgroundWorkers
             }
         }
 
-        bool ShouldPump()
+        bool ShouldPump(bool canRelease = true)
         {
-            var shouldPump = false;
             lock (_sync)
             {
-                if (!_isPumping && (_maxWorkers == 0 || _activeHandlers - 1 < _maxWorkers))
-                {
-                    _activeHandlers--;
-                    shouldPump = _isPumping = true;                    
-                }
-            }
+                if (_isPumping) return false;
 
-            return shouldPump;
+                if (_maxWorkers == 0) return true;
+
+                if (canRelease)
+                {
+                    if ((_activeHandlers - 1) >= _maxWorkers) return false;
+                
+                    _activeHandlers--;
+                    return _isPumping = true;
+                }
+                
+                if (_activeHandlers < _maxWorkers)
+                {
+                    return _isPumping = true;
+                }
+
+                return false;
+            }
         }
     }
 }

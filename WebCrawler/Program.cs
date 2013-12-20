@@ -14,7 +14,7 @@ namespace WebCrawler
 
             Configuration.Current
                 .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
-                .WithQueue("WebCrawler")
+                .WithQueue("WebCrawler", 2)
                 .CreateHost().Start();
 
             Console.WriteLine("Enter the URL to start");
