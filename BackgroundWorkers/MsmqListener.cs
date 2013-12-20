@@ -78,12 +78,13 @@ namespace BackgroundWorkers
                 _queue.EndPeek(ar);
 
                 Task handlerTask;
-
+                var handler = _func();
+                    
                 using (var scope = new TransactionScope())
                 {
                     var message = _queue.Receive(MessageQueueTransactionType.Automatic);
 
-                    handlerTask = _func().Run((T) message.Body);
+                    handlerTask = handler.Run((T) message.Body);
 
                     scope.Complete();
                 }
@@ -101,6 +102,8 @@ namespace BackgroundWorkers
 
                         _logger.Exception(t.Exception);
                     }
+
+                    handler.Dispose();
 
                     if (ShouldPump())
                         Pump();

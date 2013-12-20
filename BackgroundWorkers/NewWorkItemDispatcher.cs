@@ -56,6 +56,12 @@ namespace BackgroundWorkers
             
             return null;
         }
+
+        public void Dispose()
+        {
+            foreach(var c in _clients)
+                c.Dispose();
+        }
     }
 
     public class NewWorkItem

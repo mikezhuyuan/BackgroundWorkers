@@ -3,17 +3,17 @@ using System.ServiceModel;
 
 namespace BackgroundWorkers
 {
-    public interface IWorkItemQueueClient
+    public interface IWorkItemQueueClient : IDisposable
     {
         void Enqueue(object item);
     }
 
-    public interface IInternalWorkItemQueueClient
+    public interface IInternalWorkItemQueueClient : IWorkItemQueueClient
     {
         void Enqueue(object item, WorkItem parent);
     }
 
-    public class WorkItemQueueClient : IWorkItemQueueClient, IInternalWorkItemQueueClient
+    public class WorkItemQueueClient : IInternalWorkItemQueueClient
     {
         readonly ISendMessage<NewWorkItem> _queue;
         readonly IMessageFormatter _messageFormatter;
@@ -48,6 +48,11 @@ namespace BackgroundWorkers
                 ParentId = parent == null? (Guid?)null : parent.Id
             });
 
+        }
+
+        public void Dispose()
+        {
+            _queue.Dispose();
         }
     }
 }

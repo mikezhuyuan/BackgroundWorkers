@@ -67,5 +67,10 @@ namespace BackgroundWorkers
             
             return null;
         }
+
+        public void Dispose()
+        {
+            
+        }
     }
 }

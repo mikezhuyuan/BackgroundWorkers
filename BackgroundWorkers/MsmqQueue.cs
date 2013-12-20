@@ -18,5 +18,10 @@ namespace BackgroundWorkers
         }
 
         public string Queue { get { return _queue.QueueName; } }
+
+        public void Dispose()
+        {
+            _queue.Dispose();
+        }
     }
 }

@@ -122,5 +122,10 @@ namespace BackgroundWorkers
                 txs.Complete();
             }
         }
+
+        public void Dispose()
+        {
+            _workItemQueueClient.Dispose();
+        }
     }
 }
