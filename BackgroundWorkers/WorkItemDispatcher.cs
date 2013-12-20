@@ -63,13 +63,10 @@ namespace BackgroundWorkers
                 repository.Update(workItem);                
             }
 
-            return Task.Factory.StartNew(() =>
-            {
-                DispatchCore(workItem, _messageFormatter.Deserialize(workItem.Message));
-            });    
+            return DispatchCore(workItem, _messageFormatter.Deserialize(workItem.Message));   
         }
 
-        async void DispatchCore(WorkItem workItem, object message)
+        async Task DispatchCore(WorkItem workItem, object message)
         {
             _logger.Information(workItem.ToString());
 

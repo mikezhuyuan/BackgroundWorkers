@@ -26,7 +26,7 @@ namespace WebCrawler
                 //client.Enqueue(new UrlMessage { Url = url });
                 client.Enqueue(new DummyMessage());
                 client.Enqueue(new DummyMessage());
-                client.Enqueue(new DummyMessage());
+                //client.Enqueue(new DummyMessage());
                 scope.Complete();
             }
 
