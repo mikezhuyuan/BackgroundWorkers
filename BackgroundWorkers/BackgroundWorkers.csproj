@@ -58,13 +58,17 @@
     <Compile Include="DefaultDependencyScope.cs" />
     <Compile Include="ErrorHandlingPolicy.cs" />
     <Compile Include="IHandleRawMessage.cs" />
+    <Compile Include="IHandleRawMessageFactory.cs" />
     <Compile Include="IncompleteWork.cs" />
     <Compile Include="ISendMessage.cs" />
     <Compile Include="IListenToQueue.cs" />
     <Compile Include="MsmqHelpers.cs" />
     <Compile Include="MsmqListener.cs" />
     <Compile Include="MsmqQueue.cs" />
+    <Compile Include="NewWorkItemDispatcherFactory.cs" />
     <Compile Include="Persistence\Sql\WorkItemsTable.cs" />
+    <Compile Include="PoisonedWorkItemDispatcherFactory.cs" />
+    <Compile Include="QueueConfiguration.cs" />
     <Compile Include="RetryClock.cs" />
     <Compile Include="ServiceInstanceScopeExtension.cs" />
     <Compile Include="ExceptionExtensions.cs" />
@@ -89,6 +93,7 @@
     <Compile Include="Configuration.cs" />
     <Compile Include="WorkItemDispatcherException.cs" />
     <Compile Include="NewWorkItemDispatcher.cs" />
+    <Compile Include="WorkItemDispatcherFactory.cs" />
     <Compile Include="WorkItemQueueClient.cs" />
   </ItemGroup>
   <ItemGroup>
