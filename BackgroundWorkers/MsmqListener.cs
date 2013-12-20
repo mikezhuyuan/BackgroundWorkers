@@ -141,7 +141,7 @@ namespace BackgroundWorkers
             var shouldPump = false;
             lock (_sync)
             {
-                if (!_isPumping && (_maxWorkers == 0 || (_activeHandlers - 1) < _maxWorkers))
+                if (!_isPumping && (_maxWorkers == 0 || _activeHandlers < _maxWorkers))
                 {
                     _activeHandlers--;
                     shouldPump = _isPumping = true;                    

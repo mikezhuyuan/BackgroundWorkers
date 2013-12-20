@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using BackgroundWorkers;
 
@@ -8,7 +9,10 @@ namespace WebCrawler
     {
         public override Task Run(DummyMessage message)
         {
-            throw new Exception("Doh1");
+            return Task.Factory.StartNew(() =>
+            {
+                Thread.Sleep(5000);
+            });
         }
     }
 
