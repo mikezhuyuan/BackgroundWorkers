@@ -17,7 +17,7 @@ namespace BackgroundWorkers
             DependencyResolver = new DefaultDependencyResolver();
             Now = () => DateTime.Now;
             WorkItemRepositoryProvider = new InMemoryWorkItemRepositoryProvider();
-            Queues = new Collection<QueueConfiguration>();
+            WorkItemQueues = new Collection<QueueConfiguration>();
 #if(DEBUG)
             RetryDelay = TimeSpan.FromSeconds(10);
             RetryCount = 2;
@@ -29,8 +29,6 @@ namespace BackgroundWorkers
             PoisonedWorkItemQueue = new QueueConfiguration("BackgroundWorkersPoisonedWorkItemsQueue");
         }
 
-        public QueueConfiguration PoisonedWorkItemQueue { get; private set; }
-
         public IMessageFormatter MessageFormatter { get; private set; }
 
         public ILogger Logger { get; private set; }
@@ -41,26 +39,28 @@ namespace BackgroundWorkers
 
         public IWorkItemRepositoryProvider WorkItemRepositoryProvider { get; private set; }
 
-        public Collection<QueueConfiguration> Queues { get; private set; }
+        public Collection<QueueConfiguration> WorkItemQueues { get; private set; }
+
+        public QueueConfiguration NewWorkItemQueue { get; private set; }
+
+        public QueueConfiguration PoisonedWorkItemQueue { get; private set; }
 
         public TimeSpan RetryDelay { get; private set; }
 
         public int RetryCount { get; private set; }
 
-        public QueueConfiguration NewWorkItemQueue { get; private set; }
-
         public Host CreateHost()
         {
-            EnsureQueues(Queues.Select(q => q.Name).Concat(new[] { NewWorkItemQueue.Name, PoisonedWorkItemQueue.Name }));
+            EnsureQueues(WorkItemQueues.Select(q => q.Name).Concat(new[] { NewWorkItemQueue.Name, PoisonedWorkItemQueue.Name }));
 
-            var widFactories = Queues.ToDictionary(qc => qc, qc => new WorkItemDispatcherFactory(this));
+            var widFactories = WorkItemQueues.ToDictionary(qc => qc, qc => new WorkItemDispatcherFactory(this));
             var nwidFactory = new NewWorkItemDispatcherFactory(this);
             var pwidFactory = new PoisonedWorkItemDispatcherFactory(this);
 
-            var clients = Queues.Select(MsmqHelpers.CreateQueue<Guid>).ToArray();
+            var clients = WorkItemQueues.Select(MsmqHelpers.CreateQueue<Guid>).ToArray();
 
             return new Host(
-                Queues.Select(q => new MsmqListener<Guid>(MsmqHelpers.CreateNativeQueue(q), widFactories[q].Create, Logger, q.MaxWorkers)),
+                WorkItemQueues.Select(q => new MsmqListener<Guid>(MsmqHelpers.CreateNativeQueue(q), widFactories[q].Create, Logger, q.MaxWorkers)),
                 new MsmqListener<NewWorkItem>(MsmqHelpers.CreateNativeQueue(NewWorkItemQueue), nwidFactory.Create, Logger, NewWorkItemQueue.MaxWorkers),
                 new MsmqListener<Guid>(MsmqHelpers.CreateNativeQueue(PoisonedWorkItemQueue), pwidFactory.Create, Logger, PoisonedWorkItemQueue.MaxWorkers),
                 new RetryClock(RetryDelay, Logger, WorkItemRepositoryProvider, Now, clients),
@@ -111,7 +111,7 @@ namespace BackgroundWorkers
 
         public WorkersConfiguration WithQueue(string name, int maxWorkers = 1)
         {
-            Queues.Add(new QueueConfiguration(name, maxWorkers));
+            WorkItemQueues.Add(new QueueConfiguration(name, maxWorkers));
             return this;
         }
 

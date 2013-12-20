@@ -15,7 +15,7 @@ namespace BackgroundWorkers
 
         public IHandleRawMessage<NewWorkItem> Create()
         {
-            var clients = _configuration.Queues.Select(MsmqHelpers.CreateQueue<Guid>);
+            var clients = _configuration.WorkItemQueues.Select(MsmqHelpers.CreateQueue<Guid>);
 
             return new NewWorkItemDispatcher(_configuration.MessageFormatter, _configuration.WorkItemRepositoryProvider,
                 clients, _configuration.Logger);
