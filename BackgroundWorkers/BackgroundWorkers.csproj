@@ -72,7 +72,7 @@
     <Compile Include="RetryClock.cs" />
     <Compile Include="ServiceInstanceScopeExtension.cs" />
     <Compile Include="ExceptionExtensions.cs" />
-    <Compile Include="Host.cs" />
+    <Compile Include="WorkersHost.cs" />
     <Compile Include="IDependencyResolver.cs" />
     <Compile Include="IDependencyScope.cs" />
     <Compile Include="IHandleFault.cs" />

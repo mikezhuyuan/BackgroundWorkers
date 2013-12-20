@@ -49,7 +49,7 @@ namespace BackgroundWorkers
 
         public int RetryCount { get; private set; }
 
-        public Host CreateHost()
+        public WorkersHost CreateHost()
         {
             EnsureQueues(WorkItemQueues.Select(q => q.Name).Concat(new[] { NewWorkItemQueue.Name, PoisonedWorkItemQueue.Name }));
 
@@ -59,7 +59,7 @@ namespace BackgroundWorkers
 
             var clients = WorkItemQueues.Select(MsmqHelpers.CreateQueue<Guid>).ToArray();
 
-            return new Host(
+            return new WorkersHost(
                 WorkItemQueues.Select(q => new MsmqListener<Guid>(MsmqHelpers.CreateNativeQueue(q), widFactories[q].Create, Logger, q.MaxWorkers)),
                 new MsmqListener<NewWorkItem>(MsmqHelpers.CreateNativeQueue(NewWorkItemQueue), nwidFactory.Create, Logger, NewWorkItemQueue.MaxWorkers),
                 new MsmqListener<Guid>(MsmqHelpers.CreateNativeQueue(PoisonedWorkItemQueue), pwidFactory.Create, Logger, PoisonedWorkItemQueue.MaxWorkers),

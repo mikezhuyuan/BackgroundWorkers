@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace BackgroundWorkers
 {
-    public class Host : IDisposable
+    public class WorkersHost : IDisposable
     {
         readonly IEnumerable<IListenToQueue> _workItemDispatchers;
         readonly IListenToQueue _poisonedWorkItemDispatcher;
@@ -12,7 +12,7 @@ namespace BackgroundWorkers
         readonly IRetryClock _retryClock;
         readonly IIncompleteWork _incompleteWork;
 
-        public Host(IEnumerable<IListenToQueue> workItemDispatchers, 
+        public WorkersHost(IEnumerable<IListenToQueue> workItemDispatchers, 
             IListenToQueue poisonedWorkItemDispatcher, 
             IListenToQueue workItemQueue, 
             IRetryClock retryClock, 
