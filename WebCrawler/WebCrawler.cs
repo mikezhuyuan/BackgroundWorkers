@@ -40,4 +40,10 @@ namespace WebCrawler
             return await Task.FromResult(string.Empty);
         }
     }
+
+    public class UrlMessage
+    {
+        public string Url { get; set; }
+    }
+
 }
