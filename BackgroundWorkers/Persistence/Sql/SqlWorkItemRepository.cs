@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Transactions;
 using Dapper;
 
 namespace BackgroundWorkers.Persistence.Sql
@@ -17,6 +18,11 @@ namespace BackgroundWorkers.Persistence.Sql
         {
             _connection = new SqlConnection(ConfigurationManager.ConnectionStrings[connectionStringName].ConnectionString);
             _connection.Open();
+
+            if (Transaction.Current != null)
+            {
+                _connection.EnlistTransaction(Transaction.Current);
+            }
         }
 
         public WorkItem Find(Guid workItemId)

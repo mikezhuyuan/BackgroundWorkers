@@ -2,7 +2,7 @@
 
 namespace BackgroundWorkers
 {
-    public class MsmqQueue<T> : IMessageQueue<T>
+    public class MsmqQueue<T> : ISendMessage<T>
     {
         readonly MessageQueue _queue;
 

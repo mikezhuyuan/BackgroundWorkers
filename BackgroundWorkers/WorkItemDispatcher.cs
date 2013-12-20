@@ -10,7 +10,6 @@ namespace BackgroundWorkers
     {
         readonly IDependencyResolver _dependencyResolver;
         readonly IWorkItemRepositoryProvider _workItemRepoitoryProvider;
-        readonly IWorkItemRepository _workItemRepository;
         readonly IInternalWorkItemQueueClient _workItemQueueClient;
         readonly IMessageFormatter _messageFormatter;
         readonly IErrorHandlingPolicy _errorHandlingPolicy;
@@ -19,7 +18,6 @@ namespace BackgroundWorkers
         public WorkItemDispatcher(
             IDependencyResolver dependencyResolver,                        
             IWorkItemRepositoryProvider workItemRepoitoryProvider,
-            IWorkItemRepository workItemRepository,
             IInternalWorkItemQueueClient workItemQueueClient,
             IMessageFormatter messageFormatter,
             IErrorHandlingPolicy errorHandlingPolicy,
@@ -27,7 +25,6 @@ namespace BackgroundWorkers
         {
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
             if (workItemRepoitoryProvider == null) throw new ArgumentNullException("workItemRepoitoryProvider");
-            if (workItemRepository == null) throw new ArgumentNullException("workItemRepository");
             if (workItemQueueClient == null) throw new ArgumentNullException("workItemQueueClient");
             if (messageFormatter == null) throw new ArgumentNullException("messageFormatter");
             if (errorHandlingPolicy == null) throw new ArgumentNullException("errorHandlingPolicy");
@@ -35,7 +32,6 @@ namespace BackgroundWorkers
             
             _dependencyResolver = dependencyResolver;
             _workItemRepoitoryProvider = workItemRepoitoryProvider;
-            _workItemRepository = workItemRepository;
             _workItemQueueClient = workItemQueueClient;
             _messageFormatter = messageFormatter;
             _errorHandlingPolicy = errorHandlingPolicy;
@@ -45,29 +41,32 @@ namespace BackgroundWorkers
         public Task Run(Guid message)
         {           
             _logger.Information("WI-{0} - Dispatching", message);
+
+            WorkItem workItem;
+
+            using (var repository = _workItemRepoitoryProvider.Create())
+            {
+                workItem = repository.Find(message);
             
-            var workItem = _workItemRepository.Find(message);
-            if (workItem == null)
-            {
-                _logger.Warning("WI-{0} - Could not be found in the repository.", message);
-                return null;
+                if (workItem == null)
+                {
+                    _logger.Warning("WI-{0} - Could not be found in the repository.", message);
+                    return null;
+                }
+
+                if (!workItem.Running())
+                {
+                    _logger.Information("WI did not run {0}", workItem);
+                    return null;
+                }
+
+                repository.Update(workItem);                
             }
-
-            if (!workItem.Running())
-            {
-                _logger.Information("WI did not run {0}", workItem);
-                return null;
-            }
-                
-
-            _workItemRepository.Update(workItem);
-
-            var body = _messageFormatter.Deserialize(workItem.Message);
 
             return Task.Factory.StartNew(() =>
             {
-                DispatchCore(workItem, body);
-            });
+                DispatchCore(workItem, _messageFormatter.Deserialize(workItem.Message));
+            });    
         }
 
         async void DispatchCore(WorkItem workItem, object message)

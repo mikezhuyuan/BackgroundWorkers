@@ -18,7 +18,7 @@ namespace BackgroundWorkers
         readonly ILogger _logger;
         readonly IWorkItemRepositoryProvider _workItemRepositoryProvider;
         readonly Func<DateTime> _now;
-        readonly Dictionary<string, IMessageQueue<Guid>> _clients;
+        readonly Dictionary<string, ISendMessage<Guid>> _clients;
         readonly Timer _timer;
 
         void OnTick(object state)
@@ -56,7 +56,7 @@ namespace BackgroundWorkers
             }
         }
 
-        public RetryClock(TimeSpan delay, ILogger logger, IWorkItemRepositoryProvider workItemRepositoryProvider, Func<DateTime> now, IEnumerable<IMessageQueue<Guid>> clients)
+        public RetryClock(TimeSpan delay, ILogger logger, IWorkItemRepositoryProvider workItemRepositoryProvider, Func<DateTime> now, IEnumerable<ISendMessage<Guid>> clients)
         {
             if (logger == null) throw new ArgumentNullException("logger");
             if (workItemRepositoryProvider == null) throw new ArgumentNullException("workItemRepositoryProvider");

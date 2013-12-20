@@ -14,9 +14,9 @@ namespace BackgroundWorkers
     public class IncompleteWork  : IIncompleteWork
     {
         readonly IWorkItemRepositoryProvider _workItemRepositoryProvider;
-        Dictionary<string, IMessageQueue<Guid>> _clients;
+        Dictionary<string, ISendMessage<Guid>> _clients;
 
-        public IncompleteWork(IWorkItemRepositoryProvider workItemRepositoryProvider, IEnumerable<IMessageQueue<Guid>> clients)
+        public IncompleteWork(IWorkItemRepositoryProvider workItemRepositoryProvider, IEnumerable<ISendMessage<Guid>> clients)
         {
             if (workItemRepositoryProvider == null) throw new ArgumentNullException("workItemRepositoryProvider");
             if (clients == null) throw new ArgumentNullException("clients");

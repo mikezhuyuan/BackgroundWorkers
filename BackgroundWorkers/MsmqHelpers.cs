@@ -28,5 +28,15 @@ namespace BackgroundWorkers
         {
             get { return new NetMsmqBinding {Security = {Mode = NetMsmqSecurityMode.None}}; }
         }
+
+        public static MsmqQueue<T> CreateQueue<T>(QueueConfiguration configuration)
+        {
+            return new MsmqQueue<T>(CreateNativeQueue(configuration));
+        }
+
+        public static MessageQueue CreateNativeQueue(QueueConfiguration configuration)
+        {
+            return new MessageQueue(PrivateQueueUri(configuration.Name));
+        }
     }
 }

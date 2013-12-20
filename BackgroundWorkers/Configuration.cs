@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Messaging;
 using BackgroundWorkers.Persistence;
 
 namespace BackgroundWorkers
@@ -18,7 +17,7 @@ namespace BackgroundWorkers
             DependencyResolver = new DefaultDependencyResolver();
             Now = () => DateTime.Now;
             WorkItemRepositoryProvider = new InMemoryWorkItemRepositoryProvider();
-            Queues = new Collection<string>();
+            Queues = new Collection<QueueConfiguration>();
 #if(DEBUG)
             RetryDelay = TimeSpan.FromSeconds(10);
             RetryCount = 2;
@@ -26,11 +25,11 @@ namespace BackgroundWorkers
             RetryDelay = TimeSpan.FromMinutes(5);            
             RetryCount = 5;
 #endif
-            WorkItemQueueName = "BackgroundWorkersWorkItemQueue";
-            PoisonedWorkItemQueueName = "BackgroundWorkersPoisonedWorkItemQueue";
+            NewWorkItemQueue = new QueueConfiguration("BackgroundWorkersNewWorkItemsQueue");
+            PoisonedWorkItemQueue = new QueueConfiguration("BackgroundWorkersPoisonedWorkItemsQueue");
         }
 
-        public string PoisonedWorkItemQueueName { get; private set; }
+        public QueueConfiguration PoisonedWorkItemQueue { get; private set; }
 
         public IMessageFormatter MessageFormatter { get; private set; }
 
@@ -42,39 +41,43 @@ namespace BackgroundWorkers
 
         public IWorkItemRepositoryProvider WorkItemRepositoryProvider { get; private set; }
 
-        public Collection<string> Queues { get; private set; }
+        public Collection<QueueConfiguration> Queues { get; private set; }
 
         public TimeSpan RetryDelay { get; private set; }
 
         public int RetryCount { get; private set; }
 
-        public string WorkItemQueueName { get; private set; }
+        public QueueConfiguration NewWorkItemQueue { get; private set; }
 
         public Host CreateHost()
         {
-            EnsureQueues();
+            EnsureQueues(Queues.Select(q => q.Name).Concat(new[] { NewWorkItemQueue.Name, PoisonedWorkItemQueue.Name }));
 
-            var clients = Queues.Select(q => new MsmqQueue<Guid>(new MessageQueue(MsmqHelpers.PrivateQueueUri(q)))).ToArray();
+            var widFactories = Queues.ToDictionary(qc => qc, qc => new WorkItemDispatcherFactory(this));
+            var nwidFactory = new NewWorkItemDispatcherFactory(this);
+            var pwidFactory = new PoisonedWorkItemDispatcherFactory(this);
+
+            var clients = Queues.Select(MsmqHelpers.CreateQueue<Guid>).ToArray();
 
             return new Host(
-                Queues.Select(q => new MsmqListener<Guid>(new MessageQueue(MsmqHelpers.PrivateQueueUri(q)), () => new WorkItemDispatcher(DependencyResolver, WorkItemRepositoryProvider, WorkItemRepositoryProvider.Create(), new WorkItemQueueClient(new MsmqQueue<NewWorkItem>(new MessageQueue(MsmqHelpers.PrivateQueueUri(WorkItemQueueName))), MessageFormatter, Now), MessageFormatter, new ErrorHandlingPolicy(new MsmqQueue<Guid>(new MessageQueue(MsmqHelpers.PrivateQueueUri(PoisonedWorkItemQueueName))), WorkItemRepositoryProvider, Now, Logger, RetryCount), Logger), Logger, 1)),
-                new MsmqListener<Guid>(new MessageQueue(MsmqHelpers.PrivateQueueUri(PoisonedWorkItemQueueName)), () => new PoisonedWorkItemDispatcher(WorkItemRepositoryProvider.Create(), DependencyResolver.BeginScope(), MessageFormatter, Logger), Logger, 1),
-                new MsmqListener<NewWorkItem>(new MessageQueue(MsmqHelpers.PrivateQueueUri(WorkItemQueueName)), () => new WorkItemQueue(MessageFormatter, WorkItemRepositoryProvider.Create(), clients, Logger), Logger, 1),
+                Queues.Select(q => new MsmqListener<Guid>(MsmqHelpers.CreateNativeQueue(q), widFactories[q].Create, Logger, q.MaxWorkers)),
+                new MsmqListener<NewWorkItem>(MsmqHelpers.CreateNativeQueue(NewWorkItemQueue), nwidFactory.Create, Logger, NewWorkItemQueue.MaxWorkers),
+                new MsmqListener<Guid>(MsmqHelpers.CreateNativeQueue(PoisonedWorkItemQueue), pwidFactory.Create, Logger, PoisonedWorkItemQueue.MaxWorkers),
                 new RetryClock(RetryDelay, Logger, WorkItemRepositoryProvider, Now, clients),
                 new IncompleteWork(WorkItemRepositoryProvider, clients));
         }
 
-        void EnsureQueues()
+        static void EnsureQueues(IEnumerable<string> names)
         {
-            foreach (var q in Queues.Concat(new [] { WorkItemQueueName, PoisonedWorkItemQueueName }))
+            foreach (var q in names)
             {
                 MsmqHelpers.EnsureQueueExists(q);
-            }            
+            }
         }
 
         public IWorkItemQueueClient CreateClient()
         {
-            return new WorkItemQueueClient(new MsmqQueue<NewWorkItem>(new MessageQueue(MsmqHelpers.PrivateQueueUri(WorkItemQueueName))), MessageFormatter, Now);
+            return new WorkItemQueueClient(new MsmqQueue<NewWorkItem>(MsmqHelpers.CreateNativeQueue(NewWorkItemQueue)), MessageFormatter, Now);
         }
 
 
@@ -106,9 +109,9 @@ namespace BackgroundWorkers
             return this;
         }
 
-        public Configuration WithQueue(string name)
+        public Configuration WithQueue(string name, int maxWorkers = 1)
         {
-            Queues.Add(name);
+            Queues.Add(new QueueConfiguration(name, maxWorkers));
             return this;
         }
 
@@ -129,4 +132,97 @@ namespace BackgroundWorkers
             get { return CurrentConfig; }
         }
     }
+
+    public class WorkItemDispatcherFactory : IHandleRawMessageFactory<Guid>
+    {
+        readonly Configuration _configuration;
+
+        public WorkItemDispatcherFactory(Configuration configuration)
+
+        {
+            if (configuration == null) throw new ArgumentNullException("configuration");
+            _configuration = configuration;
+        }
+
+        public IHandleRawMessage<Guid> Create()
+        {
+            var client = new WorkItemQueueClient(MsmqHelpers.CreateQueue<NewWorkItem>(_configuration.NewWorkItemQueue), _configuration.MessageFormatter,
+                _configuration.Now);
+
+            var errorHandlingPolicy = new ErrorHandlingPolicy(
+                MsmqHelpers.CreateQueue<Guid>(_configuration.PoisonedWorkItemQueue),
+                _configuration.WorkItemRepositoryProvider,
+                _configuration.Now,
+                _configuration.Logger,
+                _configuration.RetryCount
+                );
+
+            return new WorkItemDispatcher(
+                _configuration.DependencyResolver,
+                _configuration.WorkItemRepositoryProvider,
+                client,
+                _configuration.MessageFormatter,
+                errorHandlingPolicy,
+                _configuration.Logger
+                );
+        }
+    }
+
+    public class NewWorkItemDispatcherFactory : IHandleRawMessageFactory<NewWorkItem>
+    {
+        readonly Configuration _configuration;
+
+        public NewWorkItemDispatcherFactory(Configuration configuration)
+        {
+            if (configuration == null) throw new ArgumentNullException("configuration");
+            _configuration = configuration;
+        }
+
+        public IHandleRawMessage<NewWorkItem> Create()
+        {
+            var clients = _configuration.Queues.Select(MsmqHelpers.CreateQueue<Guid>);
+
+            return new NewWorkItemDispatcher(_configuration.MessageFormatter, _configuration.WorkItemRepositoryProvider,
+                clients, _configuration.Logger);
+        }
+    }
+
+    public class PoisonedWorkItemDispatcherFactory : IHandleRawMessageFactory<Guid>
+    {
+        readonly Configuration _configuration;
+
+        public PoisonedWorkItemDispatcherFactory(Configuration configuration)
+        {
+            if (configuration == null) throw new ArgumentNullException("configuration");
+            _configuration = configuration;
+        }
+
+        public IHandleRawMessage<Guid> Create()
+        {
+            return new PoisonedWorkItemDispatcher(_configuration.WorkItemRepositoryProvider,
+                _configuration.DependencyResolver, _configuration.MessageFormatter, _configuration.Logger);
+        }
+    }
+
+    public interface IHandleRawMessageFactory<in T>
+    {
+        IHandleRawMessage<T> Create();
+    }
+   
+    public class QueueConfiguration
+    {
+        public QueueConfiguration(string name, int maxWorkers = 0)
+        {
+            Name = name;
+            MaxWorkers = maxWorkers;
+
+            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("A valid name is required.");
+        }
+
+        public string Name { get; set; }
+
+        public int MaxWorkers { get; set; }
+    }
+
+
 }

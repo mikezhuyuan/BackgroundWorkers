@@ -1,6 +1,6 @@
 ﻿namespace BackgroundWorkers
 {
-    public interface IMessageQueue<in T>
+    public interface ISendMessage<in T>
     {
         void Send(T message);
         string Queue { get; }

@@ -15,11 +15,11 @@ namespace BackgroundWorkers
 
     public class WorkItemQueueClient : IWorkItemQueueClient, IInternalWorkItemQueueClient
     {
-        readonly IMessageQueue<NewWorkItem> _queue;
+        readonly ISendMessage<NewWorkItem> _queue;
         readonly IMessageFormatter _messageFormatter;
         readonly Func<DateTime> _now;
 
-        public WorkItemQueueClient(IMessageQueue<NewWorkItem> queue, IMessageFormatter messageFormatter, Func<DateTime> now)
+        public WorkItemQueueClient(ISendMessage<NewWorkItem> queue, IMessageFormatter messageFormatter, Func<DateTime> now)
         {
             if (queue == null) throw new ArgumentNullException("queue");
             if (messageFormatter == null) throw new ArgumentNullException("messageFormatter");

@@ -12,13 +12,13 @@ namespace BackgroundWorkers
 
     public class ErrorHandlingPolicy : IErrorHandlingPolicy
     {
-        readonly IMessageQueue<Guid> _poisonedQueue;
+        readonly ISendMessage<Guid> _poisonedQueue;
         readonly IWorkItemRepositoryProvider _workItemRepositoryProvider;
         readonly Func<DateTime> _now;
         readonly ILogger _logger;
         readonly int _retryCount;
 
-        public ErrorHandlingPolicy(IMessageQueue<Guid> poisonedQueue,
+        public ErrorHandlingPolicy(ISendMessage<Guid> poisonedQueue,
             IWorkItemRepositoryProvider workItemRepositoryProvider,
             Func<DateTime> now,
             ILogger logger,
