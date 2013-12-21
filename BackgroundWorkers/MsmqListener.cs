@@ -145,12 +145,9 @@ namespace BackgroundWorkers
 
                 if (canRelease)
                 {
-                    if ((_activeHandlers - 1) >= _maxWorkers) return false;
-                
                     _activeHandlers--;
-                    return _isPumping = true;
                 }
-                
+
                 if (_activeHandlers < _maxWorkers)
                 {
                     return _isPumping = true;
