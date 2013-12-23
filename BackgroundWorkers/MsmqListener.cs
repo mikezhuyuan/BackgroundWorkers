@@ -126,7 +126,7 @@ namespace BackgroundWorkers
 
             if (!(exception is MessageQueueException)) return true;
             
-            _taskCompletionSource.SetException(exception);
+            _taskCompletionSource.TrySetException(exception);
             return false;
         }
 
