@@ -14,7 +14,7 @@ namespace WebCrawler
 
             WorkersConfiguration.Current
                     .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
-                    .WithQueue("WebCrawler", 10)
+                    .WithQueue("WebCrawler", 24)
                     .CreateHost()
                     .Start();
 

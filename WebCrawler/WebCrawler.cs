@@ -15,10 +15,8 @@ namespace WebCrawler
             var html = await RequestAsString(message.Url);
             var regx = new Regex(@"https?://([-\w\.]+)+(:\d+)?(/([-\w/_\.]*(\?\S+)?)?)?", RegexOptions.IgnoreCase);
 
-            var urls = new List<UrlMessage>();
             foreach (Match match in regx.Matches(html))
             {
-                Console.WriteLine(match.Value);
                 NewWorkItems.Add(new UrlMessage { Url = match.Value });
             }
 
@@ -26,6 +24,7 @@ namespace WebCrawler
 
         async Task<string> RequestAsString(string url)
         {
+            Console.WriteLine("Crawling: {0}", url);
             var baseAddress = new Uri(url);
             using (var handler = new HttpClientHandler())
             using (var client = new HttpClient(handler) { BaseAddress = baseAddress })
@@ -38,6 +37,11 @@ namespace WebCrawler
             }
 
             return await Task.FromResult(string.Empty);
+        }
+
+        public override void OnComplete(UrlMessage message)
+        {
+            Console.WriteLine("Discovered {0} links", NewWorkItems.Count);
         }
     }
 
