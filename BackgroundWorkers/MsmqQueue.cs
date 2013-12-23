@@ -14,7 +14,11 @@ namespace BackgroundWorkers
 
         public void Send(T message)
         {
-            _queue.Send(new Message(message, new XmlMessageFormatter(new[] {typeof (T)})), MessageQueueTransactionType.Automatic);
+            var msg = new Message(message, new XmlMessageFormatter(new[] {typeof (T)}))
+            {
+               Recoverable = true
+            };
+            _queue.Send(msg, MessageQueueTransactionType.Automatic);
         }
 
         public string Queue { get { return _queue.QueueName; } }
