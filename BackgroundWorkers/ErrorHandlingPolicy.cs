@@ -4,7 +4,7 @@ using BackgroundWorkers.Persistence;
 
 namespace BackgroundWorkers
 {
-    public interface IErrorHandlingPolicy
+    public interface IErrorHandlingPolicy : IDisposable
     {
         bool Poison(WorkItem workItem);
         void RetryOrPoison(WorkItem workItem);
@@ -83,6 +83,11 @@ namespace BackgroundWorkers
         {
             workItem.Fail(_now() + TimeSpan.FromSeconds(30));
             _workItemRepositoryProvider.Create().Update(workItem);
+        }
+
+        public void Dispose()
+        {
+            _poisonedQueue.Dispose();
         }
     }
 }

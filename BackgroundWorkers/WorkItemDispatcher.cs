@@ -90,7 +90,6 @@ namespace BackgroundWorkers
                 }
                 catch (Exception e)
                 {
-                    // fail fast on fatal
                     if (e.IsFatal())
                         throw;
 
@@ -126,6 +125,7 @@ namespace BackgroundWorkers
         public void Dispose()
         {
             _workItemQueueClient.Dispose();
+            _errorHandlingPolicy.Dispose();
         }
     }
 }
