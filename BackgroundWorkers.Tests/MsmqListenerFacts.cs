@@ -24,7 +24,7 @@ namespace BackgroundWorkers.Tests
 
             var h = Substitute.For<IHandleRawMessage<NewWorkItem>>();
             h.When(i => i.Run(Arg.Is<NewWorkItem>(a => a.Body == body))).Do(c => mre.Set());
-            h.Run(null).ReturnsForAnyArgs(Task.FromResult<object>(null));
+            h.Run(null).ReturnsForAnyArgs(Task.FromResult<Task>(null));
 
             var l = new MsmqListener<NewWorkItem>(TestQueue.Queue, () => h, Substitute.For<ILogger>());
             l.Start();

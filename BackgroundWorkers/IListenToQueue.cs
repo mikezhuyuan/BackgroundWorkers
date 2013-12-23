@@ -1,7 +1,9 @@
-﻿namespace BackgroundWorkers
+﻿using System.Threading.Tasks;
+
+namespace BackgroundWorkers
 {
     public interface IListenToQueue
     {
-        void Start();
+        Task Start();
     }
 }

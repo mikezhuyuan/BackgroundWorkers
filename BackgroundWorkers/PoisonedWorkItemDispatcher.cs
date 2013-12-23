@@ -39,7 +39,7 @@ namespace BackgroundWorkers
             return handler;
         }
 
-        public Task Run(Guid message)
+        public async Task<Task> Run(Guid message)
         {
             _logger.Information("WI-{0} - Poisoned", message);
 
@@ -51,7 +51,7 @@ namespace BackgroundWorkers
                 if (wi == null)
                 {
                     _logger.Warning("WI-{0} - Could not be found in the repository.", message);
-                    return null;
+                    return Task.FromResult((object)null);
                 }
 
                 var body = _formatter.Deserialize(wi.Message);
@@ -64,8 +64,9 @@ namespace BackgroundWorkers
                     method.Invoke(handler, new[] { body });
                 }    
             }
-            
-            return null;
+
+            return Task.FromResult((object)null);
+
         }
 
         public void Dispose()

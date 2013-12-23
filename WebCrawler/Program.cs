@@ -9,13 +9,14 @@ namespace WebCrawler
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
 
             WorkersConfiguration.Current
-                .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
-                .WithQueue("WebCrawler", 10)
-                .CreateHost().Start();
+                    .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
+                    .WithQueue("WebCrawler", 10)
+                    .CreateHost()
+                    .Start();
 
             Console.WriteLine("Enter the URL to start");
             var url = Console.ReadLine();
@@ -30,7 +31,7 @@ namespace WebCrawler
                 scope.Complete();
             }
 
-            Console.WriteLine("Crawling...");
+            Console.WriteLine("Crawling...");            
             Console.ReadLine();
             Console.WriteLine("Crawler stopped.");
         }

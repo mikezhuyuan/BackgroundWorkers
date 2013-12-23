@@ -38,7 +38,7 @@ namespace BackgroundWorkers
             _logger = logger;
         }
 
-        public Task Run(Guid message)
+        public async Task<Task> Run(Guid message)
         {           
             _logger.Information("WI-{0} - Dispatching", message);
 
@@ -51,19 +51,22 @@ namespace BackgroundWorkers
                 if (workItem == null)
                 {
                     _logger.Warning("WI-{0} - Could not be found in the repository.", message);
-                    return null;
+                    return Task.FromResult((object)null);
                 }
 
                 if (!workItem.Running())
                 {
                     _logger.Information("WI did not run {0}", workItem);
-                    return null;
+                    return Task.FromResult((object)null);
                 }
 
                 repository.Update(workItem);                
             }
 
-            return DispatchCore(workItem, _messageFormatter.Deserialize(workItem.Message));   
+            // Schedule the handler as a new task because we don't want the code in handler to
+            // block the dispatcher.
+            return await
+                    Task.Run<Task>(() => DispatchCore(workItem, _messageFormatter.Deserialize(workItem.Message)));            
         }
 
         async Task DispatchCore(WorkItem workItem, object message)

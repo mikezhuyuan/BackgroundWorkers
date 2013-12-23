@@ -30,11 +30,13 @@ namespace BackgroundWorkers
             _func = func;
             _logger = logger;
             _maxWorkers = maxWorkers;
+
         }
 
-        public void Start()
+        public Task Start()
         {
             Pump();
+            return _taskCompletionSource.Task;
         }
 
         public void Pump()
@@ -59,11 +61,10 @@ namespace BackgroundWorkers
             }
             catch (Exception exception)
             {
-                if (exception.IsFatal())
-                    throw;
+                if (!exception.IsFatal())
+                    _logger.Exception(exception);
 
-                _logger.Exception(exception);
-                throw;
+                _taskCompletionSource.TrySetException(exception);
             }            
         }
 
@@ -74,56 +75,59 @@ namespace BackgroundWorkers
             var shouldContinue = true;
 
             Task handlerTask = null;
+            var rawHandler = _func();
+
             try
             {
                 _queue.EndPeek(ar);
 
-                var handler = _func();
-                    
                 using (var scope = new TransactionScope())
                 {
                     var message = _queue.Receive(MessageQueueTransactionType.Automatic);
 
-                    handlerTask = handler.Run((T) message.Body);
+                    handlerTask = rawHandler.Run((T)message.Body);
 
                     scope.Complete();
                 }
 
-                if (handlerTask == null) 
-                    return;
-                
-                handlerTask.ContinueWith(t =>
+                handlerTask.ContinueWith(a =>
                 {
-                    if (t.IsFaulted)
+                    if (a.Status == TaskStatus.Faulted && !HandlePumpException(a.Exception))
                     {
-                        if (t.Exception.IsFatal())
-                            throw t.Exception;
-
-                        _logger.Exception(t.Exception);
+                        return;                                                 
                     }
 
-                    handler.Dispose();
+                    rawHandler.Dispose();
 
-                    if (AcquirePump())
+                    if (!ar.CompletedSynchronously && AcquirePump())
                         Pump();
-
-                }, TaskContinuationOptions.ExecuteSynchronously);
+                });
             }
             catch (Exception exception)
             {
-                if (exception.IsFatal())
-                {
-                    shouldContinue = false;
-                    throw;
-                }
-
-                _logger.Exception(exception);
+                shouldContinue = HandlePumpException(exception);
             }
             finally
             {
                 if (!ar.CompletedSynchronously && shouldContinue && AcquirePump(handlerTask == null))
                     Pump();
             }
+        }
+
+        bool HandlePumpException(Exception exception)
+        {
+            if (exception.IsFatal())
+            {
+                _taskCompletionSource.TrySetException(exception);
+                return false;
+            }
+
+            _logger.Exception(exception);
+
+            if (!(exception is MessageQueueException)) return true;
+            
+            _taskCompletionSource.SetException(exception);
+            return false;
         }
 
         void IncrementActiveHandlersCountAndStopPump()

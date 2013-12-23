@@ -11,7 +11,7 @@ namespace BackgroundWorkers
 
         public void Exception(Exception exception)
         {
-            WriteLine(ConsoleColor.Magenta, exception.Message ?? exception.GetType().ToString());
+            WriteLine(ConsoleColor.Magenta, exception.ToString() ?? exception.GetType().ToString());
         }
 
         public void Warning(string message, params object[] args)

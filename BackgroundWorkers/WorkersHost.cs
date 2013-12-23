@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace BackgroundWorkers
@@ -30,17 +31,25 @@ namespace BackgroundWorkers
             _incompleteWork = incompleteWork;
         }
 
-        public void Start()
+        public async void Start()
         {
+            
             _incompleteWork.Requeue();
 
-            foreach (var wd in _workItemDispatchers)
-                Task.Factory.StartNew(() => wd.Start());
-
-            Task.Factory.StartNew(() => _poisonedWorkItemDispatcher.Start());
-            Task.Factory.StartNew(() => _workItemQueue.Start());
+            var tasks = _workItemDispatchers
+                .Select(wd => Task.Factory.StartNew(() => wd.Start()))
+                .ToList();
+            tasks.Add(Task.Run<Task>(() => _poisonedWorkItemDispatcher.Start()));
+            tasks.Add(Task.Run<Task>(() => _workItemQueue.Start()));
             _retryClock.Start();
+
+            Task.WaitAll(tasks.ToArray());
+ 
+            var firstToFinish = await Task.WhenAny(tasks.Select(t => t.Result));
+
+            await firstToFinish;
         }
+
 
         public void Dispose()
         {
