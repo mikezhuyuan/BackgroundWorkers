@@ -143,15 +143,15 @@ namespace BackgroundWorkers
         {
             lock (_sync)
             {
-                if (_isPumping) return false;
-
-                if (_maxWorkers == 0) return true;
-
                 if (canRelease)
                 {
                     _activeHandlers--;
                 }
 
+                if (_isPumping) return false;
+
+                if (_maxWorkers == 0) return true;
+              
                 if (_activeHandlers < _maxWorkers)
                 {
                     return _isPumping = true;
