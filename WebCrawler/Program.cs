@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Threading.Tasks;
+using System.Configuration;
 using System.Transactions;
 using Autofac;
 using BackgroundWorkers;
 using BackgroundWorkers.Integration.Autofac;
+using BackgroundWorkers.Persistence.Sql;
 
 namespace WebCrawler
 {
@@ -11,10 +12,12 @@ namespace WebCrawler
     {
         static void Main()
         {
+            WorkItemsTable.Create(ConfigurationManager.ConnectionStrings["WebCrawler"].ConnectionString);
 
             WorkersConfiguration.Current
                     .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
-                    .WithQueue("WebCrawler", 24)
+                    .UseWorkItemRepositoryProvider(new SqlWorkItemRepositoryProvider("WebCrawler"))
+                    .WithQueue("WebCrawler", 32)
                     .CreateHost()
                     .Start();
 
