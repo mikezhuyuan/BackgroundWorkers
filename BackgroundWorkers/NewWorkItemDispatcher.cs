@@ -64,6 +64,7 @@ namespace BackgroundWorkers
         }
     }
 
+    [Serializable]
     public class NewWorkItem
     {
         public string Body { get; set; }
