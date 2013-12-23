@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace BackgroundWorkers
 {
     public class ConsoleLogger : ILogger
     {
+        static readonly object _sync = new object();
+
         public void Information(string message, params object[] args)
         {
             WriteLine(ConsoleColor.Cyan, message, args);
@@ -21,19 +24,20 @@ namespace BackgroundWorkers
 
         static void WriteLine(ConsoleColor color, string message, params object[] args)
         {
-            lock (Console.Out)
-            {
-                var currentColor = Console.ForegroundColor;
-                try
-                {
-                    Console.ForegroundColor = color;
-                    Console.WriteLine(message, args);
-                }
-                finally
-                {
-                    Console.ForegroundColor = currentColor;
-                }    
-            }            
+            Debug.WriteLine(message, args);
+            //lock (_sync)
+            //{
+            //    var currentColor = Console.ForegroundColor;
+            //    try
+            //    {
+            //        Console.ForegroundColor = color;
+            //        Console.WriteLine(message, args);
+            //    }
+            //    finally
+            //    {
+            //        Console.ForegroundColor = currentColor;
+            //    }    
+            //}            
         }
     }
 }
