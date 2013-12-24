@@ -27,8 +27,8 @@ namespace WebCrawler
             using (var scope = new TransactionScope())
             using(var client = WorkersConfiguration.Current.CreateClient())
             {
-                client.Enqueue(new UrlMessage { Url = url });
-                //client.Enqueue(new DummyMessage());
+                //client.Enqueue(new UrlMessage { Url = url });
+                client.Enqueue(new DummyMessage());
                 //client.Enqueue(new DummyMessage());
                 //client.Enqueue(new DummyMessage());
                 scope.Complete();

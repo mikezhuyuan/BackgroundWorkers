@@ -39,77 +39,57 @@ namespace BackgroundWorkers
             return _taskCompletionSource.Task;
         }
 
-        public void Pump()
+        public async Task Pump()
         {
-            try
+            while (true)
             {
-                while (true)
+                try
                 {
+                    if (!AcquirePump(false))
+                        break;
+
+                    var adp = new AsyncApmAdapter();
+                    _queue.EndPeek(await _queue.BeginPeek(MessageQueue.InfiniteTimeout, adp, AsyncApmAdapter.Callback));
+                    
+                    using (var scope = new TransactionScope())
+                    {
+                        var rawHandler = _func();
+
+                        var message = _queue.Receive(MessageQueueTransactionType.Automatic);
+
+                        DispatchMessageToRawHandler(rawHandler, message);
+
+                        scope.Complete();
+                    }
+
                     lock (_sync)
                     {
-                        _isPumping = true;
+                        _isPumping = false;
                     }
-
-                    var ar = _queue.BeginPeek(MessageQueue.InfiniteTimeout, null, OnPeek);
-
-                    if (!ar.CompletedSynchronously)
-                        break;
-
-                    if (!AcquirePump())
-                        break;
                 }
-            }
-            catch (Exception exception)
-            {
-                if (!exception.IsFatal())
-                    _logger.Exception(exception);
-
-                _taskCompletionSource.TrySetException(exception);
-            }            
+                catch (Exception exception)
+                {
+                    if(!HandlePumpException(exception))
+                        break;
+                }    
+            }                        
         }
 
-        void OnPeek(IAsyncResult ar)
+        async void DispatchMessageToRawHandler(IHandleRawMessage<T> handler, Message message)
         {
-            IncrementActiveHandlersCountAndStopPump();
-
-            var shouldContinue = true;
-
-            Task handlerTask = null;
-            var rawHandler = _func();
-
+            var exceptionHandled = false;
             try
             {
-                _queue.EndPeek(ar);
-
-                using (var scope = new TransactionScope())
-                {
-                    var message = _queue.Receive(MessageQueueTransactionType.Automatic);
-
-                    handlerTask = rawHandler.Run((T)message.Body);
-
-                    scope.Complete();
-                }
-
-                handlerTask.ContinueWith(a =>
-                {
-                    if (a.Status == TaskStatus.Faulted && !HandlePumpException(a.Exception))
-                    {
-                        return;                                                 
-                    }
-
-                    rawHandler.Dispose();
-
-                    if (!ar.CompletedSynchronously && AcquirePump())
-                        Pump();
-                });
+                await handler.Run((T)message.Body);
+                handler.Dispose();
             }
             catch (Exception exception)
             {
-                shouldContinue = HandlePumpException(exception);
+                exceptionHandled = HandlePumpException(exception);
             }
             finally
-            {
-                if (!ar.CompletedSynchronously && shouldContinue && AcquirePump(handlerTask == null))
+            {                
+                if (exceptionHandled && AcquirePump())
                     Pump();
             }
         }
@@ -130,22 +110,17 @@ namespace BackgroundWorkers
             return false;
         }
 
-        void IncrementActiveHandlersCountAndStopPump()
+        bool AcquirePump(bool release = true)
         {
             lock (_sync)
             {
-                _isPumping = false;
-                _activeHandlers++;
-            }
-        }
-
-        bool AcquirePump(bool canRelease = true)
-        {
-            lock (_sync)
-            {
-                if (canRelease)
+                if (release)
                 {
                     _activeHandlers--;
+                }
+                else
+                {
+                    _activeHandlers++;
                 }
 
                 if (_isPumping) return false;
