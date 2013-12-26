@@ -17,7 +17,7 @@ namespace WebCrawler
             WorkersConfiguration.Current
                     .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
                     .UseWorkItemRepositoryProvider(new SqlWorkItemRepositoryProvider("WebCrawler"))
-                    .WithQueue("WebCrawler", 1)
+                    .WithQueue("WebCrawler")
                     .CreateHost()
                     .Start();
 
@@ -27,11 +27,11 @@ namespace WebCrawler
             using (var scope = new TransactionScope())
             using(var client = WorkersConfiguration.Current.CreateClient())
             {
-                //client.Enqueue(new UrlMessage { Url = url });
-                for (var i = 0; i < 2; i++)
-                {
-                    client.Enqueue(new DummyMessage());    
-                }
+                client.Enqueue(new UrlMessage { Url = url });
+                //for (var i = 0; i < 2; i++)
+                //{
+                //    client.Enqueue(new DummyMessage());    
+                //}
                 scope.Complete();
             }
 
