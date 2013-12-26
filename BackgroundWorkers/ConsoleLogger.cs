@@ -24,20 +24,19 @@ namespace BackgroundWorkers
 
         static void WriteLine(ConsoleColor color, string message, params object[] args)
         {
-            Debug.WriteLine(message, args);
-            //lock (_sync)
-            //{
-            //    var currentColor = Console.ForegroundColor;
-            //    try
-            //    {
-            //        Console.ForegroundColor = color;
-            //        Console.WriteLine(message, args);
-            //    }
-            //    finally
-            //    {
-            //        Console.ForegroundColor = currentColor;
-            //    }    
-            //}            
+            lock (_sync)
+            {
+                var currentColor = Console.ForegroundColor;
+                try
+                {
+                    Console.ForegroundColor = color;
+                    Console.WriteLine(message, args);
+                }
+                finally
+                {
+                    Console.ForegroundColor = currentColor;
+                }
+            }            
         }
     }
 }

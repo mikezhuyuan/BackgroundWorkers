@@ -38,7 +38,7 @@ namespace BackgroundWorkers
             _logger = logger;
         }
 
-        public async Task<Task> Run(Guid message)
+        public Task Run(Guid message)
         {           
             _logger.Information("WI-{0} - Dispatching", message);
 
@@ -65,8 +65,9 @@ namespace BackgroundWorkers
 
             // Schedule the handler as a new task because we don't want the code in handler to
             // block the dispatcher.
-            return await
-                    Task.Run<Task>(() => DispatchCore(workItem, _messageFormatter.Deserialize(workItem.Message)));            
+            var t = Task.Run<Task>(() => DispatchCore(workItem, _messageFormatter.Deserialize(workItem.Message)));
+            t.Wait();
+            return t.Result;            
         }
 
         async Task DispatchCore(WorkItem workItem, object message)

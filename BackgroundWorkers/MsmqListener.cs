@@ -35,7 +35,9 @@ namespace BackgroundWorkers
 
         public Task Start()
         {
-            Pump();
+            if(AcquirePump())
+                Pump();
+
             return _taskCompletionSource.Task;
         }
 
@@ -44,10 +46,7 @@ namespace BackgroundWorkers
             while (true)
             {
                 try
-                {
-                    if (!AcquirePump(false))
-                        break;
-
+                {                    
                     var adp = new AsyncApmAdapter();
                     _queue.EndPeek(await _queue.BeginPeek(MessageQueue.InfiniteTimeout, adp, AsyncApmAdapter.Callback));
                     
@@ -65,7 +64,10 @@ namespace BackgroundWorkers
                     lock (_sync)
                     {
                         _isPumping = false;
-                    }
+                    
+                        if (!AcquirePump())
+                            break;                    
+                    }                   
                 }
                 catch (Exception exception)
                 {
@@ -77,7 +79,7 @@ namespace BackgroundWorkers
 
         async void DispatchMessageToRawHandler(IHandleRawMessage<T> handler, Message message)
         {
-            var exceptionHandled = false;
+            var exceptionHandled = true;
             try
             {
                 await handler.Run((T)message.Body);
@@ -88,8 +90,8 @@ namespace BackgroundWorkers
                 exceptionHandled = HandlePumpException(exception);
             }
             finally
-            {                
-                if (exceptionHandled && AcquirePump())
+            {
+                if (AcquirePump(true) && exceptionHandled)
                     Pump();
             }
         }
@@ -110,7 +112,7 @@ namespace BackgroundWorkers
             return false;
         }
 
-        bool AcquirePump(bool release = true)
+        bool AcquirePump(bool release = false)
         {
             lock (_sync)
             {
@@ -118,17 +120,12 @@ namespace BackgroundWorkers
                 {
                     _activeHandlers--;
                 }
-                else
-                {
-                    _activeHandlers++;
-                }
 
                 if (_isPumping) return false;
 
-                if (_maxWorkers == 0) return true;
-              
-                if (_activeHandlers < _maxWorkers)
+                if (_maxWorkers == 0 || _activeHandlers < _maxWorkers)
                 {
+                    _activeHandlers++;
                     return _isPumping = true;
                 }
 

@@ -5,6 +5,6 @@ namespace BackgroundWorkers
 {
     public interface IHandleRawMessage<in T> : IDisposable
     {
-        Task<Task> Run(T message);
+        Task Run(T message);
     }
 }

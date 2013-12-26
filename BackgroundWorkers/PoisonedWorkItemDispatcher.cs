@@ -39,7 +39,7 @@ namespace BackgroundWorkers
             return handler;
         }
 
-        public async Task<Task> Run(Guid message)
+        public Task Run(Guid message)
         {
             _logger.Information("WI-{0} - Poisoned", message);
 

@@ -28,7 +28,7 @@ namespace BackgroundWorkers
             _logger = logger;
         }
 
-        public async Task<Task> Run(NewWorkItem message)
+        public Task Run(NewWorkItem message)
         {
             WorkItem parent = null;
 
