@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Messaging;
 using System.Threading.Tasks;
 using System.Transactions;
 using BackgroundWorkers.Persistence;
@@ -38,29 +39,38 @@ namespace BackgroundWorkers
             _logger = logger;
         }
 
-        public Task Run(Guid message)
-        {           
+        public void OnDequeue(Guid message)
+        {
             _logger.Information("WI-{0} - Dispatching", message);
-
-            WorkItem workItem;
 
             using (var repository = _workItemRepoitoryProvider.Create())
             {
-                workItem = repository.Find(message);
-            
+                WorkItem workItem = repository.Find(message);
+
                 if (workItem == null)
                 {
                     _logger.Warning("WI-{0} - Could not be found in the repository.", message);
-                    return Task.FromResult((object)null);
+                    return;
                 }
 
                 if (!workItem.Running())
                 {
                     _logger.Information("WI did not run {0}", workItem);
-                    return Task.FromResult((object)null);
+                    return;
                 }
 
-                repository.Update(workItem);                
+                repository.Update(workItem);
+            }
+
+        }
+
+        public Task Run(Guid message)
+        {           
+            WorkItem workItem;
+
+            using (var repository = _workItemRepoitoryProvider.Create())
+            {
+                workItem = repository.Find(message);
             }
 
             // Schedule the handler as a new task because we don't want the code in handler to
@@ -103,9 +113,9 @@ namespace BackgroundWorkers
         }
 
         public void Complete(WorkItem workItem, dynamic handler, object message)
-        {
-            using (var txs = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel =  IsolationLevel.ReadCommitted}))
-            using(var workItemRepository = _workItemRepoitoryProvider.Create())
+        {            
+            using (var txs = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted }))
+            using (var workItemRepository = _workItemRepoitoryProvider.Create())
             {
 
                 foreach (var i in (IEnumerable<object>)handler.NewWorkItems)

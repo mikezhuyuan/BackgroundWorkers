@@ -49,17 +49,21 @@ namespace BackgroundWorkers
                 {                    
                     var adp = new AsyncApmAdapter();
                     _queue.EndPeek(await _queue.BeginPeek(MessageQueue.InfiniteTimeout, adp, AsyncApmAdapter.Callback));
+
+                    var rawHandler = _func();
+
+                    Message message;
                     
-                    using (var scope = new TransactionScope())
+                    using (var scope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted }))
                     {
-                        var rawHandler = _func();
+                        message = _queue.Receive(MessageQueueTransactionType.Automatic);
 
-                        var message = _queue.Receive(MessageQueueTransactionType.Automatic);
-
-                        DispatchMessageToRawHandler(rawHandler, message);
+                        rawHandler.OnDequeue((T)message.Body);
 
                         scope.Complete();
                     }
+
+                    DispatchMessageToRawHandler(rawHandler, message);
 
                     lock (_sync)
                     {

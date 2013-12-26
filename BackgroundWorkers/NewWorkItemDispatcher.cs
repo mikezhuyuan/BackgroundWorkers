@@ -28,7 +28,7 @@ namespace BackgroundWorkers
             _logger = logger;
         }
 
-        public Task Run(NewWorkItem message)
+        public void OnDequeue(NewWorkItem message)
         {
             WorkItem parent = null;
 
@@ -40,7 +40,7 @@ namespace BackgroundWorkers
                     if (parent == null)
                     {
                         _logger.Warning("Could not find the parent work item - {0}. New work item creation failed.", message.ParentId);
-                        return Task.FromResult((object)null);
+                        return;
                     }
                 }
 
@@ -51,9 +51,13 @@ namespace BackgroundWorkers
                     var wi = new WorkItem(wib.GetType().FullName, message.Body, c.Queue, message.CreatedOn, parent);
                     repository.Add(wi);
                     c.Send(wi.Id);
-                }   
+                }
             }
 
+        }
+
+        public Task Run(NewWorkItem message)
+        {         
             return Task.FromResult((object)null);            
         }
 
