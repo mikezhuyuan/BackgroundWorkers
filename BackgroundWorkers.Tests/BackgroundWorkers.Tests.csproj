@@ -52,10 +52,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Fixture.cs" />
     <Compile Include="MessageFormatterFacts.cs" />
     <Compile Include="MsmqListenerFacts.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestQueue.cs" />
+    <Compile Include="WorkItemFacts.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
