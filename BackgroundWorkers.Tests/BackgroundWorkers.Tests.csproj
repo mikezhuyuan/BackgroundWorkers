@@ -52,7 +52,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ErrorHandlingPolicyFacts.cs" />
     <Compile Include="Fixture.cs" />
+    <Compile Include="IFixture.cs" />
     <Compile Include="MessageFormatterFacts.cs" />
     <Compile Include="MsmqListenerFacts.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

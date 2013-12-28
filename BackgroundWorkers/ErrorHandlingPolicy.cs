@@ -38,7 +38,7 @@ namespace BackgroundWorkers
 
         public bool Poison(WorkItem workItem)
         {
-            if (workItem.DispatchCount > _retryCount)
+            if (workItem.DispatchCount < _retryCount)
                 return false;
 
             PoisonCore(workItem);
