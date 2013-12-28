@@ -38,7 +38,7 @@ namespace BackgroundWorkers
 
         public bool Poison(WorkItem workItem)
         {
-            if (workItem.DispatchCount <= _retryCount)
+            if (CanRetry(workItem))
                 return false;
 
             PoisonCore(workItem);
@@ -49,7 +49,7 @@ namespace BackgroundWorkers
         {
             try
             {
-                if (workItem.DispatchCount < _retryCount)
+                if (CanRetry(workItem))
                 {
                     Retry(workItem);
                 }
@@ -65,6 +65,11 @@ namespace BackgroundWorkers
 
                 _logger.Exception(e);                
             }            
+        }
+
+        bool CanRetry(WorkItem workItem)
+        {
+            return workItem.DispatchCount <= _retryCount;
         }
 
         void PoisonCore(WorkItem workItem)
