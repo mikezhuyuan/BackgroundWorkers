@@ -17,12 +17,14 @@ namespace BackgroundWorkers
         readonly Func<DateTime> _now;
         readonly ILogger _logger;
         readonly int _retryCount;
+        readonly TimeSpan _retryDelay;
 
-        public ErrorHandlingPolicy(ISendMessage<Guid> poisonedQueue,
-            IWorkItemRepositoryProvider workItemRepositoryProvider,
-            Func<DateTime> now,
-            ILogger logger,
-            int retryCount)
+        public ErrorHandlingPolicy(ISendMessage<Guid> poisonedQueue, 
+            IWorkItemRepositoryProvider workItemRepositoryProvider, 
+            Func<DateTime> now, 
+            ILogger logger, 
+            int retryCount, 
+            TimeSpan retryDelay)
         {
             if (poisonedQueue == null) throw new ArgumentNullException("poisonedQueue");
             if (workItemRepositoryProvider == null) throw new ArgumentNullException("workItemRepositoryProvider");
@@ -34,6 +36,7 @@ namespace BackgroundWorkers
             _now = now;
             _logger = logger;
             _retryCount = retryCount;
+            _retryDelay = retryDelay;
         }
 
         public bool Poison(WorkItem workItem)
@@ -86,7 +89,7 @@ namespace BackgroundWorkers
 
         void Retry(WorkItem workItem)
         {
-            workItem.Fail(_now() + TimeSpan.FromSeconds(30));
+            workItem.Fail(_now() + _retryDelay);
             _workItemRepositoryProvider.Create().Update(workItem);
         }
 

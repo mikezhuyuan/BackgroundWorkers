@@ -17,7 +17,7 @@ namespace WebCrawler
             WorkersConfiguration.Current
                     .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
                     .UseWorkItemRepositoryProvider(new SqlWorkItemRepositoryProvider("WebCrawler"))
-                    .WithQueue("WebCrawler")
+                    .WithQueue("WebCrawler", c => { c.RetryCount = 2; })
                     .CreateHost()
                     .Start();
 

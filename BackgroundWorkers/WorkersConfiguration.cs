@@ -18,13 +18,6 @@ namespace BackgroundWorkers
             Now = () => DateTime.Now;
             WorkItemRepositoryProvider = new InMemoryWorkItemRepositoryProvider();
             WorkItemQueues = new Collection<QueueConfiguration>();
-#if(DEBUG)
-            RetryDelay = TimeSpan.FromSeconds(10);
-            RetryCount = 2;
-#else
-            RetryDelay = TimeSpan.FromMinutes(5);            
-            RetryCount = 5;
-#endif
             NewWorkItemQueue = new QueueConfiguration("BackgroundWorkersNewWorkItemsQueue");
             PoisonedWorkItemQueue = new QueueConfiguration("BackgroundWorkersPoisonedWorkItemsQueue");
         }
@@ -45,15 +38,13 @@ namespace BackgroundWorkers
 
         public QueueConfiguration PoisonedWorkItemQueue { get; private set; }
 
-        public TimeSpan RetryDelay { get; private set; }
-
-        public int RetryCount { get; private set; }
+        public TimeSpan RetryClockFrequency { get; set; }
 
         public WorkersHost CreateHost()
         {
             EnsureQueues(WorkItemQueues.Select(q => q.Name).Concat(new[] { NewWorkItemQueue.Name, PoisonedWorkItemQueue.Name }));
 
-            var widFactories = WorkItemQueues.ToDictionary(qc => qc, qc => new WorkItemDispatcherFactory(this));
+            var widFactories = WorkItemQueues.ToDictionary(qc => qc, qc => new WorkItemDispatcherFactory(this, qc));
             var nwidFactory = new NewWorkItemDispatcherFactory(this);
             var pwidFactory = new PoisonedWorkItemDispatcherFactory(this);
 
@@ -63,7 +54,7 @@ namespace BackgroundWorkers
                 WorkItemQueues.Select(q => new MsmqListener<Guid>(MsmqHelpers.CreateNativeQueue(q), widFactories[q].Create, Logger, q.MaxWorkers)),
                 new MsmqListener<NewWorkItem>(MsmqHelpers.CreateNativeQueue(NewWorkItemQueue), nwidFactory.Create, Logger, NewWorkItemQueue.MaxWorkers),
                 new MsmqListener<Guid>(MsmqHelpers.CreateNativeQueue(PoisonedWorkItemQueue), pwidFactory.Create, Logger, PoisonedWorkItemQueue.MaxWorkers),
-                new RetryClock(RetryDelay, Logger, WorkItemRepositoryProvider, Now, clients),
+                new RetryClock(RetryClockFrequency, Logger, WorkItemRepositoryProvider, Now, clients),
                 new IncompleteWork(WorkItemRepositoryProvider, clients));
         }
 
@@ -109,21 +100,17 @@ namespace BackgroundWorkers
             return this;
         }
 
-        public WorkersConfiguration WithQueue(string name, int maxWorkers = 1)
+        public WorkersConfiguration WithQueue(string name, Action<QueueConfiguration> configuration)
         {
-            WorkItemQueues.Add(new QueueConfiguration(name, maxWorkers));
+            var c = new QueueConfiguration(name);
+            configuration(c);
+            WorkItemQueues.Add(c);
             return this;
         }
 
         public WorkersConfiguration WithRetryDelay(TimeSpan delay)
         {
-            RetryDelay = RetryDelay;
-            return this;
-        }
-
-        public WorkersConfiguration WithRetryCount(int count)
-        {
-            RetryCount = count;
+            RetryClockFrequency = delay;
             return this;
         }
 

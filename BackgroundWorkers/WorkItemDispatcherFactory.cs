@@ -5,12 +5,16 @@ namespace BackgroundWorkers
     public class WorkItemDispatcherFactory : IHandleRawMessageFactory<Guid>
     {
         readonly WorkersConfiguration _configuration;
+        readonly QueueConfiguration _queueConfiguration;
 
-        public WorkItemDispatcherFactory(WorkersConfiguration configuration)
+        public WorkItemDispatcherFactory(WorkersConfiguration configuration, QueueConfiguration queueConfiguration)
 
         {
             if (configuration == null) throw new ArgumentNullException("configuration");
+            if (queueConfiguration == null) throw new ArgumentNullException("queueConfiguration");
+
             _configuration = configuration;
+            _queueConfiguration = queueConfiguration;
         }
 
         public IHandleRawMessage<Guid> Create()
@@ -23,7 +27,8 @@ namespace BackgroundWorkers
                 _configuration.WorkItemRepositoryProvider,
                 _configuration.Now,
                 _configuration.Logger,
-                _configuration.RetryCount
+                _queueConfiguration.RetryCount,
+                _queueConfiguration.RetryDelay
                 );
 
             return new WorkItemDispatcher(
