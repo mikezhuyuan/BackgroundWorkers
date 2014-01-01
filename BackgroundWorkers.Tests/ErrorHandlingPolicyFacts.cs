@@ -104,6 +104,27 @@ namespace BackgroundWorkers.Tests
 
             }
 
+            [Theory]
+            [InlineData(0, WorkItemStatus.Poisoned)]
+            [InlineData(1, WorkItemStatus.Failed)]
+            public void DoesNotCatchCriticalFailures(int retryCount, WorkItemStatus status)
+            {
+                var f = new ErrorHandlingPolicyFixture
+                {
+                    RetryCount = retryCount
+                };
+
+                f.WorkItemRepository.WhenForAnyArgs(wir => wir.Update(null)).Do(c =>
+                {
+                    throw new OutOfMemoryException("doh!");
+                });
+
+                _workItem.Running();
+                Assert.Throws<OutOfMemoryException>(() => f.Subject.RetryOrPoison(_workItem));
+               
+                Assert.Equal(status, _workItem.Status);
+
+            }
 
         }
     }
