@@ -41,10 +41,9 @@ namespace BackgroundWorkers.Tests
 
                 Assert.True(f.Subject.Poison(_workItem));
                 Assert.Equal(WorkItemStatus.Poisoned, _workItem.Status);
-                
-                f.WorkItemRepository.Received(1).Update(_workItem);
-            } 
 
+                f.WorkItemRepository.Received(1).Update(_workItem);
+            }
         }
 
         public class RetryOrPoisonMethod
@@ -66,28 +65,53 @@ namespace BackgroundWorkers.Tests
                 Assert.Equal(WorkItemStatus.Failed, _workItem.Status);
                 f.WorkItemRepository.Received().Update(_workItem);
                 Assert.Equal(f.Now() + f.RetryDelay, _workItem.RetryOn);
-
             }
 
             [Fact]
             public void PoisonsWorkItemAfterMaxRetryCycles()
             {
                 var f = new ErrorHandlingPolicyFixture();
-                
+
                 _workItem.Running();
 
                 f.Subject.RetryOrPoison(_workItem);
 
                 Assert.Equal(WorkItemStatus.Poisoned, _workItem.Status);
                 f.WorkItemRepository.Received(1).Update(_workItem);
+                Assert.Equal(null, _workItem.RetryOn);
             }
+
+            [Theory]
+            [InlineData(0, WorkItemStatus.Poisoned)]
+            [InlineData(1, WorkItemStatus.Failed)]
+            public void CatchesTheFailures(int retryCount, WorkItemStatus status)
+            {
+                var f = new ErrorHandlingPolicyFixture
+                {
+                    RetryCount = retryCount
+                };
+
+                f.WorkItemRepository.WhenForAnyArgs(wir => wir.Update(null)).Do(c =>
+                {
+                    throw new InvalidOperationException("Connection is broken.");
+                });
+
+                _workItem.Running();
+
+                f.Subject.RetryOrPoison(_workItem);
+
+                Assert.Equal(status, _workItem.Status);
+
+            }
+
+
         }
     }
 
     public class ErrorHandlingPolicyFixture : IFixture<ErrorHandlingPolicy>
     {
         public ISendMessage<Guid> PoisonQueue { get; set; }
-        
+
         public IWorkItemRepositoryProvider WorkItemRepositoryProvider { get; set; }
 
         public IWorkItemRepository WorkItemRepository { get; set; }
@@ -103,7 +127,7 @@ namespace BackgroundWorkers.Tests
         public ErrorHandlingPolicyFixture()
         {
             PoisonQueue = Substitute.For<ISendMessage<Guid>>();
-            
+
             WorkItemRepositoryProvider = Substitute.For<IWorkItemRepositoryProvider>();
             WorkItemRepository = Substitute.For<IWorkItemRepository>();
 
@@ -111,12 +135,15 @@ namespace BackgroundWorkers.Tests
 
             Now = () => Fixture.Now;
             Logger = Substitute.For<ILogger>();
-            
         }
 
-        public ErrorHandlingPolicy Subject { get
+        public ErrorHandlingPolicy Subject
         {
-            return new ErrorHandlingPolicy(PoisonQueue, WorkItemRepositoryProvider, Now, Logger, RetryCount, RetryDelay);
-        } }
+            get
+            {
+                return new ErrorHandlingPolicy(PoisonQueue, WorkItemRepositoryProvider, Now, Logger, RetryCount,
+                    RetryDelay);
+            }
+        }
     }
 }
