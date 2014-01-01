@@ -13,9 +13,9 @@ namespace BackgroundWorkers
         readonly IRetryClock _retryClock;
         readonly IIncompleteWork _incompleteWork;
 
-        public WorkersHost(IEnumerable<IListenToQueue> workItemDispatchers, 
-            IListenToQueue poisonedWorkItemDispatcher, 
+        public WorkersHost(IEnumerable<IListenToQueue> workItemDispatchers,
             IListenToQueue workItemQueue, 
+            IListenToQueue poisonedWorkItemDispatcher, 
             IRetryClock retryClock, 
             IIncompleteWork incompleteWork)
         {
@@ -33,17 +33,15 @@ namespace BackgroundWorkers
 
         public async void Start()
         {
-            
+            var listeners = _workItemDispatchers.Union(new[] { _workItemQueue, _poisonedWorkItemDispatcher });
             _incompleteWork.Requeue();
 
-            var tasks = _workItemDispatchers
-                .Select(wd => Task.Factory.StartNew(() => wd.Start()))
-                .ToList();
-            tasks.Add(Task.Run<Task>(() => _poisonedWorkItemDispatcher.Start()));
-            tasks.Add(Task.Run<Task>(() => _workItemQueue.Start()));
+            var tasks = listeners.Select(l => Task.Factory.StartNew(() => l.Start()))
+                                  .ToArray();
+            
             _retryClock.Start();
 
-            Task.WaitAll(tasks.ToArray());
+            Task.WaitAll(tasks);
  
             var firstToFinish = await Task.WhenAny(tasks.Select(t => t.Result));
 
