@@ -1,0 +1,103 @@
+﻿<!doctype html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <link rel="stylesheet" href="bootstrap.css">
+    <style>
+        #thumbnails .item {
+            float: left;
+            margin: 8px;
+        }
+
+        #thumbnails .item img {
+            width: 128px;
+            height: 128px;
+        }
+    </style>
+    <script src="jquery.js"></script>
+    <script src="angular.js"></script>
+    <script src="bootstrap.js"></script>
+    <script src="jquery.signalR-2.0.1.js"></script>
+    <script src="signalr/hubs"></script>
+</head>
+
+<body ng-app="webCrawler" ng-controller="mainCtr">
+<div class="navbar navbar-default navbar-inverse" role="navigation">
+    <div class="navbar-header">
+        <a class="navbar-brand" href="#">Web Crawler</a>
+    </div>
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+        <form class="navbar-form navbar-left" role="search">
+            <div class="form-group">
+                <input id="txtUrl" type="text" class="form-control" placeholder="Please enter the url" />
+            </div>
+            <button id="btnStart" value="Start" class="btn btn-primary">Start</button>
+        </form>
+    </div>
+</div>
+<div class="container">
+    <div class="row">
+        <div class="col-sm-2">Ready: {{workitems.Ready}}</div>
+        <div class="col-sm-2">Running: {{workitems.Running}}</div>
+        <div class="col-sm-2">Completed: {{workitems.Completed}}</div>
+        <div class="col-sm-2">Failed: {{workitems.Failed}}</div>
+        <div class="col-sm-2">Poisoned: {{workitems.Poisoned}}</div>
+    </div>
+    <div class="row">
+        <textarea id="log" class="form-control" rows="3"></textarea>
+    </div>
+    <div class="row" id="thumbnails">
+        <div class="item" ng-repeat="p in pages">
+            <a target="_blank" title="{{p.url}}" href="{{p.url}}">
+                <img src="{{p.imgUrl}}" />
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+var logs = [];
+
+angular
+.module('webCrawler', [])
+.controller('mainCtr', function ($scope) {
+    $scope.pages = [];
+    $.connection.hub.url = "signalr";
+    var appHub = $.connection.appHub;
+
+    appHub.client.newPage = function (imgUrl, url) {
+        $scope.$apply(function () {
+            if ($scope.pages.length >= 128) {
+                $scope.pages.pop();
+            }
+
+            $scope.pages.unshift({ imgUrl: imgUrl, url: url });
+        });
+    };
+
+    appHub.client.workItmes = function(workitems) {
+        $scope.$apply(function() {
+            $scope.workitems = workitems;
+        });
+    };
+
+    appHub.client.log = function(msg) {
+    	if (logs.length >= 64) {
+            logs.pop();
+        }
+       	logs.unshift(msg);
+        $('#log').val(logs.join(''));
+    };
+
+    $.connection.hub.start().done(function () {
+        $('#btnStart').click(function () {
+            var url = $('#txtUrl').val();
+            appHub.server.send(url);
+        });
+    });
+});
+</script>
+</body>
+</html>
