@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Messaging;
 using System.Threading.Tasks;
 using System.Transactions;
 using BackgroundWorkers.Persistence;
@@ -45,7 +44,7 @@ namespace BackgroundWorkers
 
             using (var repository = _workItemRepoitoryProvider.Create())
             {
-                WorkItem workItem = repository.Find(message);
+                var workItem = repository.Find(message);
 
                 if (workItem == null)
                 {
