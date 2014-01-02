@@ -43,6 +43,7 @@ namespace BackgroundWorkers.Tests
                 Assert.Equal(WorkItemStatus.Poisoned, _workItem.Status);
 
                 f.WorkItemRepository.Received(1).Update(_workItem);
+                f.PoisonQueue.Received(1).Send(_workItem.Id);
             }
         }
 
