@@ -13,7 +13,7 @@ namespace BackgroundWorkers.Demo
             using (var scope = new TransactionScope())
             using (var client = WorkersConfiguration.Current.CreateClient())
             {
-                client.Enqueue(new ScrapePageMessage { Url = url });
+                client.Enqueue(new ScrapePageMessage { Urls = new List<string>{url} });
                 scope.Complete();
             }
         }

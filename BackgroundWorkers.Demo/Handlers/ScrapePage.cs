@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Transactions;
 using Dapper;
 
 namespace BackgroundWorkers.Demo.Handlers
@@ -11,47 +11,57 @@ namespace BackgroundWorkers.Demo.Handlers
     {
         public override async Task Run(ScrapePageMessage message)
         {
-            var url = message.Url;
-
-            using (var connection = ConnectionProvider.Connect())
-            {
-                if (connection.Query<int>("select count(1) from Urls where Url = @Url", new { url }).Single() != 0)
-                {
-                    return;
-                }
-
-                connection.Execute("insert into Urls (Url) values (@url)", new { url });
-            }
+            var url = message.PopRandom();
 
             var html = await HttpClientHelper.RequestAsString(url);
             if (html != null)
             {
                 var regx = new Regex(@"https?://([-\w\.]+)+(:\d+)?(/([-\w/_\.]*(\?\S+)?)?)?", RegexOptions.IgnoreCase);
 
-                foreach (Match match in regx.Matches(html))
-                {
-                    NewWorkItems.Add(new ScrapePageMessage {Url = match.Value});
-                }
-
                 var filename = ScreenshotService.Capture(url, "client");
                 AppHub.NewPage(filename, url);
-                //NewWorkItems.Add(new CapturePageMessage {Url = url});
-            }
-        }
 
-        public override void OnComplete(ScrapePageMessage message)
-        {
-            Console.WriteLine("Discovered {0} links on {1}", NewWorkItems.Count, message.Url);
-            using (var connection = ConnectionProvider.Connect())
+                var urls = new List<string>();
+                foreach (Match match in regx.Matches(html))
+                {
+                    urls.Add(match.Value);
+                }
+
+                if(urls.Any())
+                    NewWorkItems.Add(new ScrapePageMessage {Urls = urls});
+            }
+
+
+            if (message.Urls.Any())
             {
-                connection.EnlistTransaction(Transaction.Current);
-                connection.Execute("update Urls set Links = @Links where Url = @Url", new { message.Url, Links = NewWorkItems.Count });
+                int ready;
+                using (var conn = ConnectionProvider.Connect())
+                {
+                    ready = conn.Query<int>(@"select count(1) from workitems where status = 0").Single();
+                }
+
+                while (ready < 10)
+                {
+                    NewWorkItems.Add(new ScrapePageMessage { Urls = message.Urls });
+                    ready++;
+                }
             }
         }
     }
 
     public class ScrapePageMessage
     {
-        public string Url { get; set; }
+        static readonly Random Rnd = new Random();
+
+        public List<string> Urls { get; set; }
+
+        public string PopRandom()
+        {
+            var index = Rnd.Next(Urls.Count);
+            var url = Urls[index];
+            Urls.RemoveAt(index);
+
+            return url;
+        }
     }
 }
