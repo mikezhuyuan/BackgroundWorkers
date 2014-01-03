@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using BackgroundWorkers.Persistence;
 
@@ -11,6 +12,11 @@ namespace BackgroundWorkers
         readonly IWorkItemRepositoryProvider _workItemRepositoryProvider;
         readonly IEnumerable<ISendMessage<Guid>> _clients;
         readonly ILogger _logger;
+
+        readonly PerformanceCounter _counter = new PerformanceCounter(
+            PerformanceCounterConstants.Category,
+            PerformanceCounterConstants.NewWorkItemsDispatcherThroughputCounter, 
+            false);
 
         public NewWorkItemDispatcher(IMessageFormatter messageFormatter, 
             IWorkItemRepositoryProvider workItemRepositoryProvider, 
@@ -54,6 +60,7 @@ namespace BackgroundWorkers
                 }
             }
 
+            _counter.Increment();
         }
 
         public Task Run(NewWorkItem message)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using BackgroundWorkers.Persistence;
 
@@ -10,6 +11,12 @@ namespace BackgroundWorkers
         readonly IDependencyResolver _dependencyResolver;
         readonly IMessageFormatter _formatter;
         readonly ILogger _logger;
+
+        readonly PerformanceCounter _counter = new PerformanceCounter(
+            PerformanceCounterConstants.Category,
+            PerformanceCounterConstants.PoisonedWorkItemsDispatcherThroughputCounter,
+            false
+            );
 
         public PoisonedWorkItemDispatcher(
             IWorkItemRepositoryProvider workItemRepositoryProvider, 
@@ -64,6 +71,8 @@ namespace BackgroundWorkers
                     method.Invoke(handler, new[] { body });
                 }
             }
+
+            _counter.Increment();
 
         }
 

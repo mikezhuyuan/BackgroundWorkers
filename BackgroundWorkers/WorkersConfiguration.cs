@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using BackgroundWorkers.Persistence;
 
@@ -42,6 +43,7 @@ namespace BackgroundWorkers
 
         public WorkersHost CreateHost()
         {
+            EnsurePerformanceCounters();
             EnsureQueues(WorkItemQueues.Select(q => q.Name).Concat(new[] { NewWorkItemQueue.Name, PoisonedWorkItemQueue.Name }));
 
             var widFactories = WorkItemQueues.ToDictionary(qc => qc, qc => new WorkItemDispatcherFactory(this, qc));
@@ -56,6 +58,38 @@ namespace BackgroundWorkers
                 new MsmqListener<Guid>(MsmqHelpers.CreateNativeQueue(PoisonedWorkItemQueue), pwidFactory.Create, Logger, PoisonedWorkItemQueue.MaxWorkers),
                 new RetryClock(RetryClockFrequency, Logger, WorkItemRepositoryProvider, Now, clients),
                 new IncompleteWork(WorkItemRepositoryProvider, clients));
+        }
+
+       
+
+        void EnsurePerformanceCounters()
+        {
+            var ccdc = new CounterCreationDataCollection();
+
+            var newWorkItemsDispatcherThroughput = new CounterCreationData(PerformanceCounterConstants.NewWorkItemsDispatcherThroughputCounter,
+                "Number of new work items processed per second", PerformanceCounterType.RateOfCountsPerSecond64);
+
+            var poisonedWorkItemsDispatchThroughput = new CounterCreationData(PerformanceCounterConstants.PoisonedWorkItemsDispatcherThroughputCounter,
+                "Number of poisoned work items processed per second", PerformanceCounterType.RateOfCountsPerSecond64);
+
+
+            var workItemDispatcherThroughput =
+                WorkItemQueues.Select(
+                    wiq =>
+                        new CounterCreationData(string.Format(PerformanceCounterConstants.WorkItemDispatcherThroughputCounterFormate, wiq.Name),
+                            "Number of work items processed per second", PerformanceCounterType.RateOfCountsPerSecond64))
+                .ToArray();
+
+
+            ccdc.Add(newWorkItemsDispatcherThroughput);
+            ccdc.Add(poisonedWorkItemsDispatchThroughput);
+            ccdc.AddRange(workItemDispatcherThroughput);
+
+            if(PerformanceCounterCategory.Exists(PerformanceCounterConstants.Category))
+                PerformanceCounterCategory.Delete(PerformanceCounterConstants.Category);
+
+            PerformanceCounterCategory.Create(PerformanceCounterConstants.Category, "Background Workers Counters",
+                PerformanceCounterCategoryType.SingleInstance, ccdc);
         }
 
         static void EnsureQueues(IEnumerable<string> names)

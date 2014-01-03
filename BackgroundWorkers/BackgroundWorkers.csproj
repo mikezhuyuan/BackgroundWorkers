@@ -67,6 +67,7 @@
     <Compile Include="MsmqListener.cs" />
     <Compile Include="MsmqQueue.cs" />
     <Compile Include="NewWorkItemDispatcherFactory.cs" />
+    <Compile Include="PerformanceCounterConstants.cs" />
     <Compile Include="Persistence\Sql\WorkItemsTable.cs" />
     <Compile Include="PoisonedWorkItemDispatcherFactory.cs" />
     <Compile Include="QueueConfiguration.cs" />
