@@ -15,15 +15,12 @@ namespace BackgroundWorkers
         readonly IMessageFormatter _messageFormatter;
         readonly IErrorHandlingPolicy _errorHandlingPolicy;
         readonly ILogger _logger;
-        
-        public WorkItemDispatcher(
-            IDependencyResolver dependencyResolver,                        
-            IWorkItemRepositoryProvider workItemRepoitoryProvider,
-            IInternalWorkItemQueueClient workItemQueueClient,
-            IMessageFormatter messageFormatter,
-            IErrorHandlingPolicy errorHandlingPolicy,
-            ILogger logger)
+        readonly PerformanceCounter _counter;
+
+
+        public WorkItemDispatcher(string name, IDependencyResolver dependencyResolver, IWorkItemRepositoryProvider workItemRepoitoryProvider, IInternalWorkItemQueueClient workItemQueueClient, IMessageFormatter messageFormatter, IErrorHandlingPolicy errorHandlingPolicy, ILogger logger)
         {
+            if(string.IsNullOrWhiteSpace(name)) throw new ArgumentException("A valid name is required.");
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
             if (workItemRepoitoryProvider == null) throw new ArgumentNullException("workItemRepoitoryProvider");
             if (workItemQueueClient == null) throw new ArgumentNullException("workItemQueueClient");
@@ -37,6 +34,9 @@ namespace BackgroundWorkers
             _messageFormatter = messageFormatter;
             _errorHandlingPolicy = errorHandlingPolicy;
             _logger = logger;
+
+            _counter = new PerformanceCounter(PerformanceCounterConstants.Category,
+                string.Format(PerformanceCounterConstants.WorkItemDispatcherThroughputCounterFormat, name), false);
         }
 
         public void OnDequeue(Guid message)
@@ -131,6 +131,8 @@ namespace BackgroundWorkers
 
                 txs.Complete();
             }
+
+            _counter.Increment();
         }
 
         public void Dispose()

@@ -76,7 +76,7 @@ namespace BackgroundWorkers
             var workItemDispatcherThroughput =
                 WorkItemQueues.Select(
                     wiq =>
-                        new CounterCreationData(string.Format(PerformanceCounterConstants.WorkItemDispatcherThroughputCounterFormate, wiq.Name),
+                        new CounterCreationData(string.Format(PerformanceCounterConstants.WorkItemDispatcherThroughputCounterFormat, wiq.Name),
                             "Number of work items processed per second", PerformanceCounterType.RateOfCountsPerSecond64))
                 .ToArray();
 

@@ -32,6 +32,7 @@ namespace BackgroundWorkers
                 );
 
             return new WorkItemDispatcher(
+                _queueConfiguration.Name,
                 _configuration.DependencyResolver,
                 _configuration.WorkItemRepositoryProvider,
                 client,
