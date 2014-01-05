@@ -11,58 +11,57 @@ namespace BackgroundWorkers.Demo.Handlers
     {
         public override async Task Run(ScrapePageMessage message)
         {
-            using (var connection = ConnectionProvider.Connect())
-            {
-                if (connection.Query<int>("select count(1) from Urls where Url = @Url", new { message.Url }).Single() != 0)
-                {
-                    return;
-                }
+            var url = message.PopRandom();
 
-                connection.Execute("insert into Urls (Url) values (@url)", new { message.Url });
-            }
-
-            var html = await HttpClientHelper.RequestAsString(message.Url);
+            var html = await HttpClientHelper.RequestAsString(url);
             if (html != null)
             {
-                var regx = new Regex("href=\"([^\"]*)", RegexOptions.IgnoreCase);
+                var regx = new Regex(@"https?://([-\w\.]+)+(:\d+)?(/([-\w/_\.]*(\?\S+)?)?)?", RegexOptions.IgnoreCase);
 
-                var filename = ScreenshotService.Capture(message.Url, "client");
-                AppHub.NewPage(filename, message.Url);
+                var filename = ScreenshotService.Capture(url, "client");
+                AppHub.NewPage(filename, url);
 
-
-                var @this = new Uri(message.Url);
-
+                var urls = new List<string>();
                 foreach (Match match in regx.Matches(html))
                 {
-                    var href = match.Groups[1].Value;
-                    var target = new Uri(href, UriKind.RelativeOrAbsolute);
+                    urls.Add(match.Value);
+                }
 
-                    if (target.IsAbsoluteUri)
-                    {
-                        if (StringComparer.InvariantCultureIgnoreCase.Compare(@this.Host, target.Host) == 0)
-                        {
-                            NewWorkItems.Add(new ScrapePageMessage {Url = href});
-                        }
-                    }
-                    else
-                    {
-                        var builder = new UriBuilder
-                        {
-                            Scheme = @this.Scheme,
-                            Host = @this.Host,
-                            Port = @this.Port,
-                            Path = href
-                        };
+                if(urls.Any())
+                    NewWorkItems.Add(new ScrapePageMessage {Urls = urls});
+            }
 
-                        NewWorkItems.Add(new ScrapePageMessage { Url = builder.Uri.ToString() });
-                    }
-                }                    
+
+            if (message.Urls.Any())
+            {
+                int ready;
+                using (var conn = ConnectionProvider.Connect())
+                {
+                    ready = conn.Query<int>(@"select count(1) from workitems where status = 0").Single();
+                }
+
+                while (ready < 10)
+                {
+                    NewWorkItems.Add(new ScrapePageMessage { Urls = message.Urls });
+                    ready++;
+                }
             }
         }
     }
 
     public class ScrapePageMessage
     {
-        public  string Url { get; set; }
+        static readonly Random Rnd = new Random();
+
+        public List<string> Urls { get; set; }
+
+        public string PopRandom()
+        {
+            var index = Rnd.Next(Urls.Count);
+            var url = Urls[index];
+            Urls.RemoveAt(index);
+
+            return url;
+        }
     }
 }
