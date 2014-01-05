@@ -11,57 +11,58 @@ namespace BackgroundWorkers.Demo.Handlers
     {
         public override async Task Run(ScrapePageMessage message)
         {
-            var url = message.PopRandom();
-
-            var html = await HttpClientHelper.RequestAsString(url);
-            if (html != null)
+            using (var connection = ConnectionProvider.Connect())
             {
-                var regx = new Regex(@"https?://([-\w\.]+)+(:\d+)?(/([-\w/_\.]*(\?\S+)?)?)?", RegexOptions.IgnoreCase);
-
-                var filename = ScreenshotService.Capture(url, "client");
-                AppHub.NewPage(filename, url);
-
-                var urls = new List<string>();
-                foreach (Match match in regx.Matches(html))
+                if (connection.Query<int>("select count(1) from Urls where Url = @Url", new { message.Url }).Single() != 0)
                 {
-                    urls.Add(match.Value);
+                    return;
                 }
 
-                if(urls.Any())
-                    NewWorkItems.Add(new ScrapePageMessage {Urls = urls});
+                connection.Execute("insert into Urls (Url) values (@url)", new { message.Url });
             }
 
-
-            if (message.Urls.Any())
+            var html = await HttpClientHelper.RequestAsString(message.Url);
+            if (html != null)
             {
-                int ready;
-                using (var conn = ConnectionProvider.Connect())
-                {
-                    ready = conn.Query<int>(@"select count(1) from workitems where status = 0").Single();
-                }
+                var regx = new Regex("href=\"([^\"]*)", RegexOptions.IgnoreCase);
 
-                while (ready < 10)
+                var filename = ScreenshotService.Capture(message.Url, "client");
+                AppHub.NewPage(filename, message.Url);
+
+
+                var @this = new Uri(message.Url);
+
+                foreach (Match match in regx.Matches(html))
                 {
-                    NewWorkItems.Add(new ScrapePageMessage { Urls = message.Urls });
-                    ready++;
-                }
+                    var href = match.Groups[1].Value;
+                    var target = new Uri(href, UriKind.RelativeOrAbsolute);
+
+                    if (target.IsAbsoluteUri)
+                    {
+                        if (StringComparer.InvariantCultureIgnoreCase.Compare(@this.Host, target.Host) == 0)
+                        {
+                            NewWorkItems.Add(new ScrapePageMessage {Url = href});
+                        }
+                    }
+                    else
+                    {
+                        var builder = new UriBuilder
+                        {
+                            Scheme = @this.Scheme,
+                            Host = @this.Host,
+                            Port = @this.Port,
+                            Path = href
+                        };
+
+                        NewWorkItems.Add(new ScrapePageMessage { Url = builder.Uri.ToString() });
+                    }
+                }                    
             }
         }
     }
 
     public class ScrapePageMessage
     {
-        static readonly Random Rnd = new Random();
-
-        public List<string> Urls { get; set; }
-
-        public string PopRandom()
-        {
-            var index = Rnd.Next(Urls.Count);
-            var url = Urls[index];
-            Urls.RemoveAt(index);
-
-            return url;
-        }
+        public  string Url { get; set; }
     }
 }

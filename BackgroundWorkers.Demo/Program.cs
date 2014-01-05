@@ -24,10 +24,16 @@ namespace BackgroundWorkers.Demo
 
             WorkItemsTable.Create(ConnectionProvider.ConnectionString);
 
+#if DEBUG
+            const int workers = 4;
+#else
+            const int workers = 32;
+#endif
+
             WorkersConfiguration.Current
                     .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
                     .UseWorkItemRepositoryProvider(new SqlWorkItemRepositoryProvider("WebCrawler"))
-                    .WithQueue("WebCrawler", c => { c.RetryCount = 2; c.MaxWorkers = 4;})
+                    .WithQueue("WebCrawler", c => { c.RetryCount = 2; c.MaxWorkers = workers;})
                     .UseLogger(new Logger())
                     .CreateHost()
                     .Start();
