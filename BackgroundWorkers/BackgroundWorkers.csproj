@@ -97,6 +97,7 @@
     <Compile Include="NewWorkItemDispatcher.cs" />
     <Compile Include="WorkItemDispatcherFactory.cs" />
     <Compile Include="WorkItemQueueClient.cs" />
+    <Compile Include="WorkItemRoute.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

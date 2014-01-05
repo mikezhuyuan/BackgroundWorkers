@@ -27,8 +27,19 @@ namespace BackgroundWorkers.Demo
             WorkersConfiguration.Current
                     .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
                     .UseWorkItemRepositoryProvider(new SqlWorkItemRepositoryProvider("WebCrawler"))
-                    .WithQueue("WebCrawler", c => { c.RetryCount = 2; c.MaxWorkers = 4;})
-                    .UseLogger(new Logger())
+                    .WithQueue("WebCrawler", c =>
+                    {
+                        c.RetryCount = 2; 
+                        c.MaxWorkers = 2;
+                        c.ListenTo<ScrapePage>();
+                    })
+                    .WithQueue("WebCrawler.Screenshot", c =>
+                    {
+                        c.RetryCount = 2;
+                        c.MaxWorkers = 4;
+                        c.ListenTo<CapturePage>();
+                    })
+                    .UseLogger(new Logger())                    
                     .CreateHost()
                     .Start();
 

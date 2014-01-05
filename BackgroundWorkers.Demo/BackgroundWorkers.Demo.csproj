@@ -84,6 +84,7 @@
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.0.0\lib\net45\System.Net.Http.Formatting.dll</HintPath>
     </Reference>
     <Reference Include="System.Transactions" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Web.Http, Version=5.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.0.0\lib\net45\System.Web.Http.dll</HintPath>
@@ -99,6 +100,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppHub.cs" />
+    <Compile Include="BlackList.cs" />
     <Compile Include="ConnectionProvider.cs" />
     <Compile Include="Handlers\CapturePage.cs" />
     <Compile Include="Handlers\ScrapePage.cs" />
