@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 using Dapper;
 
 namespace BackgroundWorkers.Demo.Handlers
@@ -16,21 +17,27 @@ namespace BackgroundWorkers.Demo.Handlers
             var html = await HttpClientHelper.RequestAsString(url);
             if (html != null)
             {
-                var regx = new Regex(@"https?://([-\w\.]+)+(:\d+)?(/([-\w/_\.]*(\?\S+)?)?)?", RegexOptions.IgnoreCase);
+                var regx = new Regex(@"https?://([-\w\.]+)+(:\d+)?(/([-\w/_\.]*(\?[^\s""']+)?)?)?", RegexOptions.IgnoreCase);
 
-                var filename = ScreenshotService.Capture(url, "client");
-                AppHub.NewPage(filename, url);
+                NewWorkItems.Add(new CapturePageMessage {Url = url});
 
                 var urls = new List<string>();
                 foreach (Match match in regx.Matches(html))
                 {
-                    urls.Add(match.Value);
+                    var url2 = HttpUtility.HtmlDecode(match.Value);
+                    if(BlackList.ShouldVisit(url2))
+                        urls.Add(url2);
                 }
 
-                if(urls.Any())
+                if (urls.Any())
                     NewWorkItems.Add(new ScrapePageMessage {Urls = urls});
             }
-
+            else
+            {
+                BlackList.Block(url);
+                if(message.Urls.Any())
+                    NewWorkItems.Add(message);
+            }
 
             if (message.Urls.Any())
             {
@@ -42,7 +49,7 @@ namespace BackgroundWorkers.Demo.Handlers
 
                 while (ready < 10)
                 {
-                    NewWorkItems.Add(new ScrapePageMessage { Urls = message.Urls });
+                    NewWorkItems.Add(message);
                     ready++;
                 }
             }

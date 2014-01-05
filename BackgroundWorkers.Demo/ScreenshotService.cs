@@ -43,11 +43,13 @@ namespace BackgroundWorkers.Demo
                 }
                 else
                 {
+                    BlackList.Block(url);
                     return "error.jpg";
                 }
             }
             catch(Exception ex)
             {
+                BlackList.Block(url);
                 Console.WriteLine(ex);
                 p.Kill();
                 return "error.jpg";

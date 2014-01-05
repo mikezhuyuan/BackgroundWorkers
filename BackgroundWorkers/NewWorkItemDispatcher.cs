@@ -11,6 +11,7 @@ namespace BackgroundWorkers
         readonly IMessageFormatter _messageFormatter;
         readonly IWorkItemRepositoryProvider _workItemRepositoryProvider;
         readonly IEnumerable<ISendMessage<Guid>> _clients;
+        readonly WorkItemRoute _workItemRoute;
         readonly ILogger _logger;
 
         readonly PerformanceCounter _counter = new PerformanceCounter(
@@ -21,16 +22,19 @@ namespace BackgroundWorkers
         public NewWorkItemDispatcher(IMessageFormatter messageFormatter, 
             IWorkItemRepositoryProvider workItemRepositoryProvider, 
             IEnumerable<ISendMessage<Guid>> clients,
+            WorkItemRoute workItemRoute,
             ILogger logger)
         {
             if (messageFormatter == null) throw new ArgumentNullException("messageFormatter");
             if (workItemRepositoryProvider == null) throw new ArgumentNullException("workItemRepositoryProvider");
             if (clients == null) throw new ArgumentNullException("clients");
+            if (workItemRoute == null) throw new ArgumentNullException("workItemRoute");
             if (logger == null) throw new ArgumentNullException("logger");
 
             _messageFormatter = messageFormatter;
             _workItemRepositoryProvider = workItemRepositoryProvider;
             _clients = clients;
+            _workItemRoute = workItemRoute;
             _logger = logger;
         }
 
@@ -52,7 +56,7 @@ namespace BackgroundWorkers
 
                 var wib = _messageFormatter.Deserialize(message.Body);
 
-                foreach (var c in _clients)
+                foreach (var c in _workItemRoute.GetRouteTargets(wib.GetType()))
                 {
                     var wi = new WorkItem(wib.GetType().FullName, message.Body, c.Queue, message.CreatedOn, parent);
                     repository.Add(wi);

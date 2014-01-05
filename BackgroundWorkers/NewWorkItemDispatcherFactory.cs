@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace BackgroundWorkers
@@ -15,10 +16,21 @@ namespace BackgroundWorkers
 
         public IHandleRawMessage<NewWorkItem> Create()
         {
-            var clients = _configuration.WorkItemQueues.Select(MsmqHelpers.CreateQueue<Guid>);
+            var clients = new List<ISendMessage<Guid>>();
+
+            var routeTable = new List<WorkItemRouteData>();
+
+            foreach (var wiq in _configuration.WorkItemQueues)
+            {
+                var client = MsmqHelpers.CreateQueue<Guid>(wiq);
+                routeTable.Add(new WorkItemRouteData {Client = client, Config = wiq});
+                clients.Add(client);
+            }
+
+            var route = new WorkItemRoute(routeTable);
 
             return new NewWorkItemDispatcher(_configuration.MessageFormatter, _configuration.WorkItemRepositoryProvider,
-                clients, _configuration.Logger);
+                clients, route, _configuration.Logger);
         }
     }
 }
