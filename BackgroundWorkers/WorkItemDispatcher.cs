@@ -15,8 +15,8 @@ namespace BackgroundWorkers
         readonly IMessageFormatter _messageFormatter;
         readonly IErrorHandlingPolicy _errorHandlingPolicy;
         readonly ILogger _logger;
-        readonly PerformanceCounter _counter;
-
+        readonly PerformanceCounter _throughput;
+        readonly PerformanceCounter _count;
 
         public WorkItemDispatcher(string name, IDependencyResolver dependencyResolver, IWorkItemRepositoryProvider workItemRepoitoryProvider, IInternalWorkItemQueueClient workItemQueueClient, IMessageFormatter messageFormatter, IErrorHandlingPolicy errorHandlingPolicy, ILogger logger)
         {
@@ -35,8 +35,11 @@ namespace BackgroundWorkers
             _errorHandlingPolicy = errorHandlingPolicy;
             _logger = logger;
 
-            _counter = new PerformanceCounter(PerformanceCounterConstants.Category,
+            _throughput = new PerformanceCounter(PerformanceCounterConstants.Category,
                 string.Format(PerformanceCounterConstants.WorkItemDispatcherThroughputCounterFormat, name), false);
+
+            _count = new PerformanceCounter(PerformanceCounterConstants.Category, 
+                string.Format(PerformanceCounterConstants.HandlerCountFormat, name), false);
         }
 
         public void OnDequeue(Guid message)
@@ -83,7 +86,7 @@ namespace BackgroundWorkers
         async Task DispatchCore(WorkItem workItem, object message)
         {
             _logger.Information(workItem.ToString());
-
+            _count.Increment();
             using (var scope = _dependencyResolver.BeginScope())
             {
                 try
@@ -95,7 +98,7 @@ namespace BackgroundWorkers
 
                     var handler = scope.GetService(handlerType);
 
-                    await (Task)mi.Invoke(handler, new[] { message });
+                    await (Task) mi.Invoke(handler, new[] {message});
 
                     Complete(workItem, handler, message);
                 }
@@ -104,8 +107,13 @@ namespace BackgroundWorkers
                     if (e.IsFatal())
                         throw;
 
-                    _errorHandlingPolicy.RetryOrPoison(workItem);                
-                    _logger.Exception(e);                    
+                    _errorHandlingPolicy.RetryOrPoison(workItem);
+                    _logger.Exception(e);
+                }
+                finally
+                {
+                    _count.Decrement();
+                    _throughput.Increment();
                 }
             }
 
@@ -131,8 +139,6 @@ namespace BackgroundWorkers
 
                 txs.Complete();
             }
-
-            _counter.Increment();
         }
 
         public void Dispose()
