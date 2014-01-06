@@ -78,15 +78,15 @@ namespace BackgroundWorkers
 
             // Schedule the handler as a new task because we don't want the code in handler to
             // block the dispatcher.
-            var t = Task.Run<Task>(() => DispatchCore(workItem, _messageFormatter.Deserialize(workItem.Message)));
-            t.Wait();
-            return t.Result;            
+            return Task.Run<Task>(() => DispatchCore(workItem, workItem.Message));                     
         }
 
-        async Task DispatchCore(WorkItem workItem, object message)
+        async Task DispatchCore(WorkItem workItem, string rawMessage)
         {
             _logger.Information(workItem.ToString());
             _count.Increment();
+
+            var message = _messageFormatter.Deserialize(rawMessage);
             using (var scope = _dependencyResolver.BeginScope())
             {
                 try
