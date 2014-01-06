@@ -53,9 +53,9 @@ namespace BackgroundWorkers
             var clients = WorkItemQueues.Select(MsmqHelpers.CreateQueue<Guid>).ToArray();
 
             return new WorkersHost(
-                WorkItemQueues.Select(q => new MsmqListener<Guid>(MsmqHelpers.CreateNativeQueue(q), widFactories[q].Create, Logger, q.MaxWorkers)),
-                new MsmqListener<NewWorkItem>(MsmqHelpers.CreateNativeQueue(NewWorkItemQueue), nwidFactory.Create, Logger, NewWorkItemQueue.MaxWorkers),
-                new MsmqListener<Guid>(MsmqHelpers.CreateNativeQueue(PoisonedWorkItemQueue), pwidFactory.Create, Logger, PoisonedWorkItemQueue.MaxWorkers),
+                WorkItemQueues.Select(q => new MsmqListener<Guid>(q.Name, MsmqHelpers.CreateNativeQueue(q), widFactories[q].Create, Logger, q.MaxWorkers)),
+                new MsmqListener<NewWorkItem>(NewWorkItemQueue.Name, MsmqHelpers.CreateNativeQueue(NewWorkItemQueue), nwidFactory.Create, Logger, NewWorkItemQueue.MaxWorkers),
+                new MsmqListener<Guid>(PoisonedWorkItemQueue.Name, MsmqHelpers.CreateNativeQueue(PoisonedWorkItemQueue), pwidFactory.Create, Logger, PoisonedWorkItemQueue.MaxWorkers),
                 new RetryClock(RetryClockFrequency, Logger, WorkItemRepositoryProvider, Now, clients),
                 new IncompleteWork(WorkItemRepositoryProvider, clients));
         }

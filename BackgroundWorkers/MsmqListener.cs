@@ -7,6 +7,7 @@ namespace BackgroundWorkers
 {
     public class MsmqListener<T> : IListenToQueue
     {
+        readonly string _name;
         readonly MessageQueue _queue;
         readonly Func<IHandleRawMessage<T>> _func;
         readonly ILogger _logger;
@@ -17,12 +18,14 @@ namespace BackgroundWorkers
         int _activeHandlers;
         bool _isPumping;
 
-        public MsmqListener(MessageQueue queue, Func<IHandleRawMessage<T>> func, ILogger logger, int maxWorkers = 0)
+        public MsmqListener(string name, MessageQueue queue, Func<IHandleRawMessage<T>> func, ILogger logger, int maxWorkers = 0)
         {
+            if(string.IsNullOrWhiteSpace(name)) throw new ArgumentException("A valid name is required.");
             if (queue == null) throw new ArgumentNullException("queue");
             if (func == null) throw new ArgumentNullException("func");
             if (logger == null) throw new ArgumentNullException("logger");
 
+            _name = name;
             _queue = queue;
 
             _queue.Formatter = new XmlMessageFormatter(new[] {typeof (T)});
@@ -48,7 +51,9 @@ namespace BackgroundWorkers
                 try
                 {                    
                     var adp = new AsyncApmAdapter();
-                    _queue.EndPeek(await _queue.BeginPeek(MessageQueue.InfiniteTimeout, adp, AsyncApmAdapter.Callback));
+
+                    if(!TryPeek())
+                        _queue.EndPeek(await _queue.BeginPeek(MessageQueue.InfiniteTimeout, adp, AsyncApmAdapter.Callback));
 
                     var rawHandler = _func();
 
@@ -81,12 +86,29 @@ namespace BackgroundWorkers
             }                        
         }
 
+        bool TryPeek()
+        {
+            try
+            {
+                _queue.Peek(TimeSpan.Zero);
+                return true;
+            }
+            catch (MessageQueueException e)
+            {
+                if (e.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
+                    return false;
+
+                throw;
+            }
+        }
+
         async void DispatchMessageToRawHandler(IHandleRawMessage<T> handler, Message message)
         {
             var exceptionHandled = true;
             try
             {
-                await handler.Run((T)message.Body);
+                var t = handler.Run((T)message.Body);
+                await t;
                 handler.Dispose();
             }
             catch (Exception exception)

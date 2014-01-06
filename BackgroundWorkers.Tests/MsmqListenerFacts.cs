@@ -26,7 +26,7 @@ namespace BackgroundWorkers.Tests
             h.When(i => i.Run(Arg.Is<NewWorkItem>(a => a.Body == body))).Do(c => mre.Set());
             h.Run(null).ReturnsForAnyArgs(Task.FromResult<Task>(null));
 
-            var l = new MsmqListener<NewWorkItem>(TestQueue.Queue, () => h, Substitute.For<ILogger>());
+            var l = new MsmqListener<NewWorkItem>("TestQueue", TestQueue.Queue, () => h, Substitute.For<ILogger>());
             l.Start();
 
             Assert.True(mre.WaitOne(TimeSpan.FromMinutes(1)));
