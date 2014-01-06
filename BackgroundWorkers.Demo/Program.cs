@@ -30,7 +30,7 @@ namespace BackgroundWorkers.Demo
                     .WithQueue("WebCrawler", c =>
                     {
                         c.RetryCount = 2; 
-                        c.MaxWorkers = 2;
+                        c.MaxWorkers = 100;
                         c.ListenTo<ScrapePage>();
                     })
                     .WithQueue("WebCrawler.Screenshot", c =>

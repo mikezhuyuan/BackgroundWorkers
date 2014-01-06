@@ -73,23 +73,33 @@ namespace BackgroundWorkers
                 "Number of poisoned work items processed per second", PerformanceCounterType.RateOfCountsPerSecond64);
 
 
-            var workItemDispatcherThroughput =
-                WorkItemQueues.Select(
-                    wiq =>
-                        new CounterCreationData(string.Format(PerformanceCounterConstants.WorkItemDispatcherThroughputCounterFormat, wiq.Name),
-                            "Number of work items processed per second", PerformanceCounterType.RateOfCountsPerSecond64))
+            var dispatcherCounters =
+                WorkItemQueues.SelectMany(WorkItemDispatcherCounters)
                 .ToArray();
-
 
             ccdc.Add(newWorkItemsDispatcherThroughput);
             ccdc.Add(poisonedWorkItemsDispatchThroughput);
-            ccdc.AddRange(workItemDispatcherThroughput);
+            ccdc.AddRange(dispatcherCounters);
 
             if(PerformanceCounterCategory.Exists(PerformanceCounterConstants.Category))
                 PerformanceCounterCategory.Delete(PerformanceCounterConstants.Category);
 
             PerformanceCounterCategory.Create(PerformanceCounterConstants.Category, "Background Workers Counters",
                 PerformanceCounterCategoryType.SingleInstance, ccdc);
+        }
+
+        IEnumerable<CounterCreationData> WorkItemDispatcherCounters(QueueConfiguration configuration)
+        {
+            yield return
+                new CounterCreationData(
+                    string.Format(PerformanceCounterConstants.WorkItemDispatcherThroughputCounterFormat, configuration.Name),
+                    string.Format("Number of work items processed per second - {0}", configuration.Name), PerformanceCounterType.RateOfCountsPerSecond64);
+
+            yield return
+                new CounterCreationData(
+                    string.Format(PerformanceCounterConstants.HandlerCountFormat,
+                        configuration.Name),
+                    string.Format("Number of active {0} handlers", configuration.Name), PerformanceCounterType.NumberOfItems64);
         }
 
         static void EnsureQueues(IEnumerable<string> names)
