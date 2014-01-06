@@ -29,14 +29,24 @@ namespace BackgroundWorkers.Demo
                     .UseWorkItemRepositoryProvider(new SqlWorkItemRepositoryProvider("WebCrawler"))
                     .WithQueue("WebCrawler", c =>
                     {
+#if DEBUG
                         c.RetryCount = 2; 
                         c.MaxWorkers = 100;
+#else
+                        c.RetryCount = 2;
+                        c.MaxWorkers = 100;
+#endif
                         c.ListenTo<ScrapePage>();
                     })
                     .WithQueue("WebCrawler.Screenshot", c =>
                     {
+#if DEBUG
                         c.RetryCount = 2;
                         c.MaxWorkers = 4;
+#else
+                        c.RetryCount = 2;
+                        c.MaxWorkers = 32;    
+#endif
                         c.ListenTo<CapturePage>();
                     })
                     .UseLogger(new Logger())                    

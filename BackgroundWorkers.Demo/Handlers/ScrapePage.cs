@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Web;
 using Dapper;
 
 namespace BackgroundWorkers.Demo.Handlers
@@ -12,45 +10,51 @@ namespace BackgroundWorkers.Demo.Handlers
     {
         public override async Task Run(ScrapePageMessage message)
         {
-            var url = message.PopRandom();
+            using (var connection = ConnectionProvider.Connect())
+            {
+                if (connection.Query<int>("select count(1) from Urls where Url = @Url", new { message.Url }).Single() != 0)
+                {
+                    return;
+                }
 
-            var html = await HttpClientHelper.RequestAsString(url);
+                connection.Execute("insert into Urls (Url) values (@url)", new { message.Url });
+            }
+
+            var html = await HttpClientHelper.RequestAsString(message.Url);
             if (html != null)
             {
-                var regx = new Regex(@"https?://([-\w\.]+)+(:\d+)?(/([-\w/_\.]*(\?[^\s""']+)?)?)?", RegexOptions.IgnoreCase);
+                var regx = new Regex("href=\"([^\"]*)", RegexOptions.IgnoreCase);
 
-                NewWorkItems.Add(new CapturePageMessage {Url = url});
+                var filename = ScreenshotService.Capture(message.Url, "client");
+                AppHub.NewPage(filename, message.Url);
 
-                var urls = new List<string>();
+
+                var @this = new Uri(message.Url);
+
                 foreach (Match match in regx.Matches(html))
                 {
-                    var url2 = HttpUtility.HtmlDecode(match.Value);
-                    if(BlackList.ShouldVisit(url2))
-                        urls.Add(url2);
-                }
+                    var href = match.Groups[1].Value;
+                    var target = new Uri(href, UriKind.RelativeOrAbsolute);
 
-                if (urls.Any())
-                    NewWorkItems.Add(new ScrapePageMessage {Urls = urls});
-            }
-            else
-            {
-                BlackList.Block(url);
-                if(message.Urls.Any())
-                    NewWorkItems.Add(message);
-            }
+                    if (target.IsAbsoluteUri)
+                    {
+                        if (StringComparer.InvariantCultureIgnoreCase.Compare(@this.Host, target.Host) == 0)
+                        {
+                            NewWorkItems.Add(new ScrapePageMessage { Url = href });
+                        }
+                    }
+                    else
+                    {
+                        var builder = new UriBuilder
+                        {
+                            Scheme = @this.Scheme,
+                            Host = @this.Host,
+                            Port = @this.Port,
+                            Path = href
+                        };
 
-            if (message.Urls.Any())
-            {
-                int ready;
-                using (var conn = ConnectionProvider.Connect())
-                {
-                    ready = conn.Query<int>(@"select count(1) from workitems where status = 0").Single();
-                }
-
-                while (ready < 10)
-                {
-                    NewWorkItems.Add(message);
-                    ready++;
+                        NewWorkItems.Add(new ScrapePageMessage { Url = builder.Uri.ToString() });
+                    }
                 }
             }
         }
@@ -58,17 +62,6 @@ namespace BackgroundWorkers.Demo.Handlers
 
     public class ScrapePageMessage
     {
-        static readonly Random Rnd = new Random();
-
-        public List<string> Urls { get; set; }
-
-        public string PopRandom()
-        {
-            var index = Rnd.Next(Urls.Count);
-            var url = Urls[index];
-            Urls.RemoveAt(index);
-
-            return url;
-        }
+        public string Url { get; set; }
     }
 }
