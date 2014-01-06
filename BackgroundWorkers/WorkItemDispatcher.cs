@@ -78,7 +78,7 @@ namespace BackgroundWorkers
 
             // Schedule the handler as a new task because we don't want the code in handler to
             // block the dispatcher.
-            return Task.Run<Task>(() => DispatchCore(workItem, workItem.Message));                     
+            return Task.Run(() => DispatchCore(workItem, workItem.Message));                     
         }
 
         async Task DispatchCore(WorkItem workItem, string rawMessage)
