@@ -5,7 +5,7 @@ using BackgroundWorkers.Persistence;
 
 namespace BackgroundWorkers
 {    
-    public class NewWorkItemDispatcher : IPrepareWorkItems<NewWorkItem>
+    public class NewWorkItemDispatcher : IPrepareWorkItems<NewWorkItem>, IDisposable
     {
         readonly IMessageFormatter _messageFormatter;
         readonly IWorkItemRepositoryProvider _workItemRepositoryProvider;

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Messaging;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -59,20 +58,23 @@ namespace BackgroundWorkers
 
                     var rawHandler = _func();
 
-                    IEnumerable<WorkItem> workItems;
+                    IEnumerable<WorkItem> preparedWorkItems;
 
                     using (var scope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted }))
                     {
                         var message = _queue.Receive(MessageQueueTransactionType.Automatic);
 
-                        workItems =  rawHandler.Prepare((T)message.Body);
+                        preparedWorkItems =  rawHandler.Prepare((T)message.Body);
 
                         scope.Complete();
                     }
 
                     var process = rawHandler as IProcessWorkItems;
-                    if(process != null)
-                        DispatchMessageToRawHandler(process, workItems);
+
+                    if (process != null)
+                        Dispatch(process, preparedWorkItems);
+                    else
+                        Dispose(rawHandler);
 
                     lock (_sync)
                     {
@@ -106,16 +108,14 @@ namespace BackgroundWorkers
             }
         }
 
-        async void DispatchMessageToRawHandler(IProcessWorkItems handler, IEnumerable<WorkItem> workItems)
+        async void Dispatch(IProcessWorkItems handler, IEnumerable<WorkItem> workItems)
         {
             var exceptionHandled = true;
             try
             {
                 var t = handler.Process(workItems);
                 await t;
-                var disposable = handler as IDisposable;
-                if(disposable != null)
-                 disposable.Dispose();
+                Dispose(handler);
             }
             catch (Exception exception)
             {
@@ -125,6 +125,15 @@ namespace BackgroundWorkers
             {
                 if (AcquirePump(true) && exceptionHandled)
                     Pump();
+            }
+        }
+
+        static void Dispose(object thing)
+        {
+            var disposable = thing as IDisposable;
+            if (disposable != null)
+            {
+                disposable.Dispose();
             }
         }
 

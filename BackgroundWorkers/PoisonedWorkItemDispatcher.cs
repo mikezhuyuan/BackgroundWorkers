@@ -78,10 +78,6 @@ namespace BackgroundWorkers
 
 
         }
-
-        public void Dispose()
-        {
-            
-        }
+        
     }
 }

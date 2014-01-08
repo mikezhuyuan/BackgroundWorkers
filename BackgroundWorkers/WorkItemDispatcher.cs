@@ -8,7 +8,7 @@ using BackgroundWorkers.Persistence;
 
 namespace BackgroundWorkers
 {
-    public class WorkItemDispatcher : IPrepareWorkItems<Guid>, IProcessWorkItems
+    public class WorkItemDispatcher : IPrepareWorkItems<Guid>, IProcessWorkItems, IDisposable
     {
         readonly IDependencyResolver _dependencyResolver;
         readonly IWorkItemRepositoryProvider _workItemRepoitoryProvider;

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace BackgroundWorkers
 {
-    public interface IPrepareWorkItems<in T> : IDisposable
+    public interface IPrepareWorkItems<in T>
     {
         IEnumerable<WorkItem> Prepare(T message);
     }
