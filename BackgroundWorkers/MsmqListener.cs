@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Messaging;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -64,7 +65,7 @@ namespace BackgroundWorkers
                     {
                         var message = _queue.Receive(MessageQueueTransactionType.Automatic);
 
-                        preparedWorkItems =  rawHandler.Prepare((T)message.Body);
+                        preparedWorkItems =  rawHandler.Prepare((T)message.Body).ToArray();
 
                         scope.Complete();
                     }
