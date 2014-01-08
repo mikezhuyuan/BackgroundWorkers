@@ -35,15 +35,13 @@ namespace BackgroundWorkers
 
         public IEnumerable<WorkItem> Prepare(NewWorkItem message)
         {
-            WorkItem parent = null;
-
             using (var repository = _workItemRepositoryProvider.Create())
             {
                 var wib = _messageFormatter.Deserialize(message.Body);
 
                 foreach (var c in _workItemRoute.GetRouteTargets(wib.GetType()))
                 {
-                    var wi = new WorkItem(wib.GetType().FullName, message.Body, c.Queue, message.CreatedOn, parent);
+                    var wi = new WorkItem(wib.GetType().FullName, message.Body, c.Queue, message.CreatedOn, message.ParentId);
                     repository.Add(wi);
                     c.Send(wi.Id);
                     yield return wi;

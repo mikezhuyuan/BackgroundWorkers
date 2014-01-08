@@ -11,7 +11,7 @@ namespace BackgroundWorkers.Tests
         public void StartsInReadyState()
         {
             Assert.Equal(WorkItemStatus.Ready, _workItem.Status);
-            Assert.Equal(WorkItemStatus.Ready, new WorkItem("t", "m", "q", Fixture.Now, _workItem).Status);
+            Assert.Equal(WorkItemStatus.Ready, new WorkItem("t", "m", "q", Fixture.Now, _workItem.Id).Status);
         }
 
         [Fact]

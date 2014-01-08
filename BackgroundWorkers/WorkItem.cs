@@ -18,7 +18,7 @@ namespace BackgroundWorkers
         {
         }
 
-        public WorkItem(string type, string message, string queue, DateTime createdOn, WorkItem parent = null)
+        public WorkItem(string type, string message, string queue, DateTime createdOn, Guid? parentId = null)
         {
             if (string.IsNullOrWhiteSpace(type)) throw new ArgumentException("A valid type is required.");
             if (string.IsNullOrWhiteSpace(message)) throw new ArgumentException("A valid message is required.");
@@ -29,8 +29,7 @@ namespace BackgroundWorkers
             Message = message;
             Queue = queue;
             CreatedOn = createdOn;
-            if(parent != null)
-                ParentId = parent.Id;
+            ParentId = parentId;
         }
 
         public Guid Id { get; private set; }
