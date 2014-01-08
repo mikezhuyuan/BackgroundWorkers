@@ -25,10 +25,6 @@ namespace BackgroundWorkers.Demo.Handlers
             {
                 var regx = new Regex("href=\"([^\"]*)", RegexOptions.IgnoreCase);
 
-                var filename = ScreenshotService.Capture(message.Url, "client");
-                AppHub.NewPage(filename, message.Url);
-
-
                 var @this = new Uri(message.Url);
 
                 foreach (Match match in regx.Matches(html))
@@ -41,6 +37,7 @@ namespace BackgroundWorkers.Demo.Handlers
                         if (StringComparer.InvariantCultureIgnoreCase.Compare(@this.Host, target.Host) == 0)
                         {
                             NewWorkItems.Add(new ScrapePageMessage { Url = href });
+                            NewWorkItems.Add(new CapturePageMessage { Url = href });
                         }
                     }
                     else
@@ -54,6 +51,8 @@ namespace BackgroundWorkers.Demo.Handlers
                         };
 
                         NewWorkItems.Add(new ScrapePageMessage { Url = builder.Uri.ToString() });
+                        NewWorkItems.Add(new CapturePageMessage { Url = builder.Uri.ToString() });
+
                     }
                 }
             }

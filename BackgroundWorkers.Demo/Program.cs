@@ -36,7 +36,7 @@ namespace BackgroundWorkers.Demo
                         c.RetryCount = 2;
                         c.MaxWorkers = 100;
 #endif
-                        c.ListenTo<ScrapePage>();
+                        c.ListenTo<ScrapePageMessage>();
                     })
                     .WithQueue("WebCrawler.Screenshot", c =>
                     {
@@ -47,7 +47,7 @@ namespace BackgroundWorkers.Demo
                         c.RetryCount = 2;
                         c.MaxWorkers = 32;    
 #endif
-                        c.ListenTo<CapturePage>();
+                        c.ListenTo<CapturePageMessage>();
                     })
                     .UseLogger(new Logger())                    
                     .CreateHost()
