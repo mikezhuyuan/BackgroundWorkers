@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 using BackgroundWorkers.Persistence;
 
 namespace BackgroundWorkers
 {
-    public class WorkItemDispatcher : IHandleRawMessage<Guid>
+    public class WorkItemDispatcher : IPrepareWorkItems<Guid>, IProcessWorkItems
     {
         readonly IDependencyResolver _dependencyResolver;
         readonly IWorkItemRepositoryProvider _workItemRepoitoryProvider;
@@ -42,7 +43,7 @@ namespace BackgroundWorkers
                 string.Format(PerformanceCounterConstants.HandlerCountFormat, name), false);
         }
 
-        public void OnDequeue(Guid message)
+        public IEnumerable<WorkItem> Prepare(Guid message)
         {
             _logger.Information("WI-{0} - Dispatching", message);
 
@@ -53,32 +54,30 @@ namespace BackgroundWorkers
                 if (workItem == null)
                 {
                     _logger.Warning("WI-{0} - Could not be found in the repository.", message);
-                    return;
+                    yield break;
                 }
 
                 if (!workItem.Running())
                 {
                     _logger.Information("WI did not run {0}", workItem);
-                    return;
+                    yield break;
                 }
 
                 repository.Update(workItem);
+
+                yield return workItem;
             }
 
         }
 
-        public Task Run(Guid message)
-        {           
-            WorkItem workItem;
-
-            using (var repository = _workItemRepoitoryProvider.Create())
-            {
-                workItem = repository.Find(message);
-            }
+        public Task Process(IEnumerable<WorkItem> workItems)
+        {
+            if (workItems == null) throw new ArgumentNullException("workItems");
 
             // Schedule the handler as a new task because we don't want the code in handler to
             // block the dispatcher.
-            return Task.Run(() => DispatchCore(workItem, workItem.Message));                     
+            var workItem = workItems.Single();
+            return Task.Run(() => DispatchCore(workItem, workItem.Message));
         }
 
         async Task DispatchCore(WorkItem workItem, string rawMessage)

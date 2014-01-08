@@ -22,10 +22,9 @@ namespace BackgroundWorkers.Tests
 
             var mre = new ManualResetEvent(false);
 
-            var h = Substitute.For<IHandleRawMessage<NewWorkItem>>();
-            h.When(i => i.Run(Arg.Is<NewWorkItem>(a => a.Body == body))).Do(c => mre.Set());
-            h.Run(null).ReturnsForAnyArgs(Task.FromResult<Task>(null));
-
+            var h = Substitute.For<IPrepareWorkItems<NewWorkItem>>();
+            h.When(i => i.Prepare(Arg.Is<NewWorkItem>(a => a.Body == body))).Do(c => mre.Set());
+            
             var l = new MsmqListener<NewWorkItem>("TestQueue", TestQueue.Queue, () => h, Substitute.For<ILogger>());
             l.Start();
 

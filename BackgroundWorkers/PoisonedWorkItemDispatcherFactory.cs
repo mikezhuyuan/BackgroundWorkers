@@ -2,7 +2,7 @@
 
 namespace BackgroundWorkers
 {
-    public class PoisonedWorkItemDispatcherFactory : IHandleRawMessageFactory<Guid>
+    public class PoisonedWorkItemDispatcherFactory : IPrepareWorkItemsFactory<Guid>
     {
         readonly WorkersConfiguration _configuration;
 
@@ -12,7 +12,7 @@ namespace BackgroundWorkers
             _configuration = configuration;
         }
 
-        public IHandleRawMessage<Guid> Create()
+        public IPrepareWorkItems<Guid> Create()
         {
             return new PoisonedWorkItemDispatcher(_configuration.WorkItemRepositoryProvider,
                 _configuration.DependencyResolver, _configuration.MessageFormatter, _configuration.Logger);

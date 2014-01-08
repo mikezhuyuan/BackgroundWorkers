@@ -2,7 +2,7 @@ using System;
 
 namespace BackgroundWorkers
 {
-    public class WorkItemDispatcherFactory : IHandleRawMessageFactory<Guid>
+    public class WorkItemDispatcherFactory : IPrepareWorkItemsFactory<Guid>
     {
         readonly WorkersConfiguration _configuration;
         readonly QueueConfiguration _queueConfiguration;
@@ -17,7 +17,7 @@ namespace BackgroundWorkers
             _queueConfiguration = queueConfiguration;
         }
 
-        public IHandleRawMessage<Guid> Create()
+        public IPrepareWorkItems<Guid> Create()
         {
             var client = new WorkItemQueueClient(MsmqHelpers.CreateQueue<NewWorkItem>(_configuration.NewWorkItemQueue), _configuration.MessageFormatter,
                 _configuration.Now);

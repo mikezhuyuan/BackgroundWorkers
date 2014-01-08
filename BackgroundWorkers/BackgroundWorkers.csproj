@@ -58,8 +58,8 @@
     <Compile Include="DefaultDependencyResolver.cs" />
     <Compile Include="DefaultDependencyScope.cs" />
     <Compile Include="ErrorHandlingPolicy.cs" />
-    <Compile Include="IHandleRawMessage.cs" />
-    <Compile Include="IHandleRawMessageFactory.cs" />
+    <Compile Include="IProcessWorkItems.cs" />
+    <Compile Include="IPrepareWorkItemsFactory.cs" />
     <Compile Include="IncompleteWork.cs" />
     <Compile Include="ISendMessage.cs" />
     <Compile Include="IListenToQueue.cs" />

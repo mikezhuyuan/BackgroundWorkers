@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using BackgroundWorkers.Persistence;
 
 namespace BackgroundWorkers
 {
-    public class PoisonedWorkItemDispatcher : IHandleRawMessage<Guid>
+    public class PoisonedWorkItemDispatcher : IPrepareWorkItems<Guid>
     {
         readonly IWorkItemRepositoryProvider _workItemRepositoryProvider;
         readonly IDependencyResolver _dependencyResolver;
@@ -46,7 +46,7 @@ namespace BackgroundWorkers
             return handler;
         }
 
-        public void OnDequeue(Guid message)
+        public IEnumerable<WorkItem> Prepare(Guid message)
         {
             _logger.Information("WI-{0} - Poisoned", message);
 
@@ -58,7 +58,7 @@ namespace BackgroundWorkers
                 if (wi == null)
                 {
                     _logger.Warning("WI-{0} - Could not be found in the repository.", message);
-                    return;
+                    yield break;
                 }
 
                 var body = _formatter.Deserialize(wi.Message);
@@ -70,15 +70,13 @@ namespace BackgroundWorkers
                     var method = handler.GetType().GetMethod("Run");
                     method.Invoke(handler, new[] { body });
                 }
+
+                yield return wi;
             }
 
             _counter.Increment();
 
-        }
 
-        public Task Run(Guid message)
-        {            
-            return Task.FromResult((object)null);
         }
 
         public void Dispose()

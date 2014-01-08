@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Messaging;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -9,7 +11,7 @@ namespace BackgroundWorkers
     {
         readonly string _name;
         readonly MessageQueue _queue;
-        readonly Func<IHandleRawMessage<T>> _func;
+        readonly Func<IPrepareWorkItems<T>> _func;
         readonly ILogger _logger;
         readonly int _maxWorkers;
         readonly object _sync = new object();
@@ -18,7 +20,7 @@ namespace BackgroundWorkers
         int _activeHandlers;
         bool _isPumping;
 
-        public MsmqListener(string name, MessageQueue queue, Func<IHandleRawMessage<T>> func, ILogger logger, int maxWorkers = 0)
+        public MsmqListener(string name, MessageQueue queue, Func<IPrepareWorkItems<T>> func, ILogger logger, int maxWorkers = 0)
         {
             if(string.IsNullOrWhiteSpace(name)) throw new ArgumentException("A valid name is required.");
             if (queue == null) throw new ArgumentNullException("queue");
@@ -57,18 +59,20 @@ namespace BackgroundWorkers
 
                     var rawHandler = _func();
 
-                    Message message;
-                    
+                    IEnumerable<WorkItem> workItems;
+
                     using (var scope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted }))
                     {
-                        message = _queue.Receive(MessageQueueTransactionType.Automatic);
+                        var message = _queue.Receive(MessageQueueTransactionType.Automatic);
 
-                        rawHandler.OnDequeue((T)message.Body);
+                        workItems =  rawHandler.Prepare((T)message.Body);
 
                         scope.Complete();
                     }
 
-                    DispatchMessageToRawHandler(rawHandler, message);
+                    var process = rawHandler as IProcessWorkItems;
+                    if(process != null)
+                        DispatchMessageToRawHandler(process, workItems);
 
                     lock (_sync)
                     {
@@ -102,14 +106,16 @@ namespace BackgroundWorkers
             }
         }
 
-        async void DispatchMessageToRawHandler(IHandleRawMessage<T> handler, Message message)
+        async void DispatchMessageToRawHandler(IProcessWorkItems handler, IEnumerable<WorkItem> workItems)
         {
             var exceptionHandled = true;
             try
             {
-                var t = handler.Run((T)message.Body);
+                var t = handler.Process(workItems);
                 await t;
-                handler.Dispose();
+                var disposable = handler as IDisposable;
+                if(disposable != null)
+                 disposable.Dispose();
             }
             catch (Exception exception)
             {

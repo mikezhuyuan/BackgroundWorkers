@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace BackgroundWorkers
 {
-    public class NewWorkItemDispatcherFactory : IHandleRawMessageFactory<NewWorkItem>
+    public class NewWorkItemDispatcherFactory : IPrepareWorkItemsFactory<NewWorkItem>
     {
         readonly WorkersConfiguration _configuration;
 
@@ -14,7 +14,7 @@ namespace BackgroundWorkers
             _configuration = configuration;
         }
 
-        public IHandleRawMessage<NewWorkItem> Create()
+        public IPrepareWorkItems<NewWorkItem> Create()
         {
             var clients = new List<ISendMessage<Guid>>();
 
@@ -30,7 +30,7 @@ namespace BackgroundWorkers
             var route = new WorkItemRoute(routeTable);
 
             return new NewWorkItemDispatcher(_configuration.MessageFormatter, _configuration.WorkItemRepositoryProvider,
-                clients, route, _configuration.Logger);
+                clients, route);
         }
     }
 }
