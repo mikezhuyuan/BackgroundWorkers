@@ -30,7 +30,7 @@ namespace BackgroundWorkers
             return this;
         }
 
-        public QueueConfiguration Ignore(Type messageType)
+        public QueueConfiguration Except(Type messageType)
         {
             _messageBlackList.Add(messageType);
 
@@ -51,7 +51,7 @@ namespace BackgroundWorkers
         internal IEnumerable<Type> MessageBlackList
         {
             get { return _messageBlackList; }
-        } 
+        }
 
         internal bool IsListenToAll { get; set; }
     }
@@ -61,6 +61,11 @@ namespace BackgroundWorkers
         public static QueueConfiguration ListenTo<T>(this QueueConfiguration config)
         {
             return config.ListenTo(typeof(T));
+        }
+
+        public static QueueConfiguration Except<T>(this QueueConfiguration config)
+        {
+            return config.Except(typeof(T));
         }
     }
 }
