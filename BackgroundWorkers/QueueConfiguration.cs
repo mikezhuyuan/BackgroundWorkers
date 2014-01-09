@@ -5,7 +5,9 @@ namespace BackgroundWorkers
 {
     public class QueueConfiguration
     {
-        readonly List<Type> _messageTypes = new List<Type>(); 
+        readonly HashSet<Type> _messageWhilteList = new HashSet<Type>();
+        readonly HashSet<Type> _messageBlackList = new HashSet<Type>();
+
         public QueueConfiguration(string name)
         {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("A valid name is required.");
@@ -23,18 +25,35 @@ namespace BackgroundWorkers
 
         public QueueConfiguration ListenTo(Type messageType)
         {
-            if (!_messageTypes.Contains(messageType))
-                _messageTypes.Add(messageType);
+            _messageWhilteList.Add(messageType);
 
             return this;
         }
 
-        //TODO: ListenToAll, ExcludeListenTo
-
-        public IEnumerable<Type> MessageTypes
+        public QueueConfiguration Ignore(Type messageType)
         {
-            get { return _messageTypes; }
+            _messageBlackList.Add(messageType);
+
+            return this;
         }
+
+        public QueueConfiguration ListenToAll()
+        {
+            IsListenToAll = true;
+            return this;
+        }
+
+        internal IEnumerable<Type> MessageWhilteList
+        {
+            get { return _messageWhilteList; }
+        }
+
+        internal IEnumerable<Type> MessageBlackList
+        {
+            get { return _messageBlackList; }
+        } 
+
+        internal bool IsListenToAll { get; set; }
     }
 
     public static class QueueConfigurationExtentions
