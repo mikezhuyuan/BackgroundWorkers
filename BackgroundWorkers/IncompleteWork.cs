@@ -30,7 +30,7 @@ namespace BackgroundWorkers
             using(var scope = new TransactionScope())
             using (var repository = _workItemRepositoryProvider.Create())
             {
-                foreach (var wi in repository.RunningItems())
+                foreach (var wi in repository.IncompleteItems())
                 {
                     wi.Ready();
                     repository.Update(wi);

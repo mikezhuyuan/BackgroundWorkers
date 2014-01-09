@@ -13,6 +13,6 @@ namespace BackgroundWorkers.Persistence
 
         IEnumerable<WorkItem> ReadyToRetry(DateTime now);
 
-        IEnumerable<WorkItem> RunningItems();
+        IEnumerable<WorkItem> IncompleteItems();
     }
 }

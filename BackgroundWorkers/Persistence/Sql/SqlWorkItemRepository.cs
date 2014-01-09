@@ -10,12 +10,15 @@ namespace BackgroundWorkers.Persistence.Sql
 {
     public class SqlWorkItemRepository : IWorkItemRepository
     {
+        readonly Func<DateTime> _now;
         readonly SqlConnection _connection;
 
         const string Columns = "Id, Type, Message, Queue, Status, Version, CreatedOn, ParentId, RetryOn, DispatchCount, Version as NewVersion";
 
-        public SqlWorkItemRepository(string connectionStringName)
+        public SqlWorkItemRepository(string connectionStringName, Func<DateTime> now)
         {
+            if (now == null) throw new ArgumentNullException("now");
+            _now = now;
             _connection = new SqlConnection(ConfigurationManager.ConnectionStrings[connectionStringName].ConnectionString);
             _connection.Open();
 
@@ -71,10 +74,10 @@ namespace BackgroundWorkers.Persistence.Sql
                     " from workitems where RetryOn <= @now", new {now});
         }
 
-        public IEnumerable<WorkItem> RunningItems()
+        public IEnumerable<WorkItem> IncompleteItems()
         {
-            return _connection.Query<WorkItem>("select " + Columns + " from workitems where status = @Status",
-                new {Status = WorkItemStatus.Running});
+            return _connection.Query<WorkItem>("select " + Columns + " from workitems where status = @Running or (status = @Failed and retryOn <= @Now)",
+                new { WorkItemStatus.Running, WorkItemStatus.Failed, Now = _now()});
         }
 
         public void Dispose()
