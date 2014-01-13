@@ -144,6 +144,18 @@ namespace BackgroundWorkers
             return this;
         }
 
+        public WorkersConfiguration UseNewWorkItemsQueueName(string name)
+        {
+            NewWorkItemQueue.Name = name;
+            return this;
+        }
+
+        public WorkersConfiguration UsePoisonedWorkItemsQueueName(string name)
+        {
+            PoisonedWorkItemQueue.Name = name;
+            return this;
+        }
+
         public WorkersConfiguration WithQueue(string name, Action<QueueConfiguration> configuration)
         {
             var c = new QueueConfiguration(name);
