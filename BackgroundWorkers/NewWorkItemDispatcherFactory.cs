@@ -29,7 +29,8 @@ namespace BackgroundWorkers
 
             var route = new WorkItemRoute(routeTable);
 
-            return new NewWorkItemDispatcher(_configuration.MessageFormatter, _configuration.WorkItemRepositoryProvider,
+            return new NewWorkItemDispatcher(_configuration.NewWorkItemQueue.Name, 
+                _configuration.MessageFormatter, _configuration.WorkItemRepositoryProvider,
                 clients, route);
         }
     }

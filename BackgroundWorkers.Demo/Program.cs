@@ -26,7 +26,7 @@ namespace BackgroundWorkers.Demo
 
             WorkersConfiguration.Current
                     .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
-                    .UseWorkItemRepositoryProvider(new SqlWorkItemRepositoryProvider("WebCrawler"))
+                    .UseWorkItemRepositoryProvider(new SqlWorkItemRepositoryProvider("WebCrawler", () => DateTime.Now))
                     .WithQueue("WebCrawler", c =>
                     {
 #if DEBUG

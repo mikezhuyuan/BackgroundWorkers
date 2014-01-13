@@ -19,17 +19,20 @@ namespace Scenarios
             
             WorkItemsTable.Create(ConfigurationManager.ConnectionStrings["Scenarios"].ConnectionString);
 
-            WorkersConfiguration.Current
+            var config = WorkersConfiguration.Current
                     .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
-                    .UseWorkItemRepositoryProvider(new SqlWorkItemRepositoryProvider("Scenarios"))
+                    .UseWorkItemRepositoryProvider(new SqlWorkItemRepositoryProvider("Scenarios", () => DateTime.Now))
+                    .UseNewWorkItemsQueueName("Scenarios.NewWorkItems")
+                    .UsePoisonedWorkItemsQueueName("Scenarios.PoisonedWorkItems")
                     .WithQueue("Scenarios", c =>
                     {
                         c.RetryCount = 2;
                         c.MaxWorkers = 10;
                         c.ListenTo<LongRunningWorkItem>();
-                    })                    
-                    .CreateHost()
-                    .Start();
+                    });
+            
+            config.CreatePerformanceCounters();
+            config.CreateHost().Start();
 
             using (var scope = new TransactionScope())
             {

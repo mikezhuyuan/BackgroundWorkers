@@ -37,10 +37,10 @@ namespace BackgroundWorkers
             _logger = logger;
 
             _throughput = new PerformanceCounter(PerformanceCounterConstants.Category,
-                string.Format(PerformanceCounterConstants.WorkItemDispatcherThroughputCounterFormat, name), false);
+                string.Format("{0}/sec", name), false);
 
             _count = new PerformanceCounter(PerformanceCounterConstants.Category, 
-                string.Format(PerformanceCounterConstants.HandlerCountFormat, name), false);
+                string.Format("{0} count", name), false);
         }
 
         public IEnumerable<WorkItem> Prepare(Guid message)

@@ -12,18 +12,11 @@ namespace BackgroundWorkers
         readonly IMessageFormatter _formatter;
         readonly ILogger _logger;
 
-        readonly PerformanceCounter _counter = new PerformanceCounter(
-            PerformanceCounterConstants.Category,
-            PerformanceCounterConstants.PoisonedWorkItemsDispatcherThroughputCounter,
-            false
-            );
+        readonly PerformanceCounter _counter;
 
-        public PoisonedWorkItemDispatcher(
-            IWorkItemRepositoryProvider workItemRepositoryProvider, 
-            IDependencyResolver dependencyResolver, 
-            IMessageFormatter formatter, 
-            ILogger logger)
+        public PoisonedWorkItemDispatcher(string name, IWorkItemRepositoryProvider workItemRepositoryProvider, IDependencyResolver dependencyResolver, IMessageFormatter formatter, ILogger logger)
         {
+            if(string.IsNullOrWhiteSpace(name)) throw new ArgumentException("A valid name is required.");
             if (workItemRepositoryProvider == null) throw new ArgumentNullException("workItemRepositoryProvider");
             if (dependencyResolver == null) throw new ArgumentNullException("dependencyResolver");
             if (formatter == null) throw new ArgumentNullException("formatter");
@@ -33,6 +26,12 @@ namespace BackgroundWorkers
             _dependencyResolver = dependencyResolver;
             _formatter = formatter;
             _logger = logger;
+
+            _counter = new PerformanceCounter(
+            PerformanceCounterConstants.Category,
+            string.Format("{0}/sec", name),
+            false
+            );
         }
 
         object FindFaultHandler(IDependencyScope scope, object message)

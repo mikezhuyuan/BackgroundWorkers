@@ -86,7 +86,7 @@ namespace BackgroundWorkers.Tests
                 new WorkItemRouteData
                 {
                     Client = client1,
-                    Config = new QueueConfiguration("q1").ListenToAll().Ignore(typeof(string))
+                    Config = new QueueConfiguration("q1").ListenToAll().Except(typeof(string))
                 },
             };
 

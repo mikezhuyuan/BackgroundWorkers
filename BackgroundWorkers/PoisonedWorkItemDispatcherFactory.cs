@@ -14,7 +14,8 @@ namespace BackgroundWorkers
 
         public IPrepareWorkItems<Guid> Create()
         {
-            return new PoisonedWorkItemDispatcher(_configuration.WorkItemRepositoryProvider,
+            return new PoisonedWorkItemDispatcher(_configuration.PoisonedWorkItemQueue.Name, 
+                _configuration.WorkItemRepositoryProvider,
                 _configuration.DependencyResolver, _configuration.MessageFormatter, _configuration.Logger);
         }
     }

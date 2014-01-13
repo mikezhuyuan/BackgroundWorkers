@@ -43,7 +43,6 @@ namespace BackgroundWorkers
 
         public WorkersHost CreateHost()
         {
-            EnsurePerformanceCounters();
             EnsureQueues(WorkItemQueues.Select(q => q.Name).Concat(new[] { NewWorkItemQueue.Name, PoisonedWorkItemQueue.Name }));
 
             var widFactories = WorkItemQueues.ToDictionary(qc => qc, qc => new WorkItemDispatcherFactory(this, qc));
@@ -59,17 +58,15 @@ namespace BackgroundWorkers
                 new RetryClock(RetryClockFrequency, Logger, WorkItemRepositoryProvider, Now, clients),
                 new IncompleteWork(WorkItemRepositoryProvider, clients));
         }
-
        
-
-        void EnsurePerformanceCounters()
+        public void CreatePerformanceCounters()
         {
             var ccdc = new CounterCreationDataCollection();
 
-            var newWorkItemsDispatcherThroughput = new CounterCreationData(PerformanceCounterConstants.NewWorkItemsDispatcherThroughputCounter,
+            var newWorkItemsDispatcherThroughput = new CounterCreationData(string.Format("{0}/sec", NewWorkItemQueue.Name),
                 "Number of new work items processed per second", PerformanceCounterType.RateOfCountsPerSecond64);
 
-            var poisonedWorkItemsDispatchThroughput = new CounterCreationData(PerformanceCounterConstants.PoisonedWorkItemsDispatcherThroughputCounter,
+            var poisonedWorkItemsDispatchThroughput = new CounterCreationData(string.Format("{0}/sec", PoisonedWorkItemQueue.Name),
                 "Number of poisoned work items processed per second", PerformanceCounterType.RateOfCountsPerSecond64);
 
 
@@ -81,23 +78,29 @@ namespace BackgroundWorkers
             ccdc.Add(poisonedWorkItemsDispatchThroughput);
             ccdc.AddRange(dispatcherCounters);
 
-            if(PerformanceCounterCategory.Exists(PerformanceCounterConstants.Category))
-                PerformanceCounterCategory.Delete(PerformanceCounterConstants.Category);
-
+            DeletePerformanceCounters();
+            
             PerformanceCounterCategory.Create(PerformanceCounterConstants.Category, "Background Workers Counters",
                 PerformanceCounterCategoryType.SingleInstance, ccdc);
+        }
+
+        public void DeletePerformanceCounters()
+        {
+            if (PerformanceCounterCategory.Exists(PerformanceCounterConstants.Category))
+                PerformanceCounterCategory.Delete(PerformanceCounterConstants.Category);
+
         }
 
         IEnumerable<CounterCreationData> WorkItemDispatcherCounters(QueueConfiguration configuration)
         {
             yield return
                 new CounterCreationData(
-                    string.Format(PerformanceCounterConstants.WorkItemDispatcherThroughputCounterFormat, configuration.Name),
+                    string.Format("{0}/sec", configuration.Name),
                     string.Format("Number of work items processed per second - {0}", configuration.Name), PerformanceCounterType.RateOfCountsPerSecond64);
 
             yield return
                 new CounterCreationData(
-                    string.Format(PerformanceCounterConstants.HandlerCountFormat,
+                    string.Format("{0} count",
                         configuration.Name),
                     string.Format("Number of active {0} handlers", configuration.Name), PerformanceCounterType.NumberOfItems64);
         }

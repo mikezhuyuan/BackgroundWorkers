@@ -12,16 +12,11 @@ namespace BackgroundWorkers
         readonly IEnumerable<ISendMessage<Guid>> _clients;
         readonly WorkItemRoute _workItemRoute;
 
-        readonly PerformanceCounter _counter = new PerformanceCounter(
-            PerformanceCounterConstants.Category,
-            PerformanceCounterConstants.NewWorkItemsDispatcherThroughputCounter, 
-            false);
+        readonly PerformanceCounter _counter;
 
-        public NewWorkItemDispatcher(IMessageFormatter messageFormatter, 
-            IWorkItemRepositoryProvider workItemRepositoryProvider, 
-            IEnumerable<ISendMessage<Guid>> clients,
-            WorkItemRoute workItemRoute)
+        public NewWorkItemDispatcher(string name, IMessageFormatter messageFormatter, IWorkItemRepositoryProvider workItemRepositoryProvider, IEnumerable<ISendMessage<Guid>> clients, WorkItemRoute workItemRoute)
         {
+            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("A valid name is required.");
             if (messageFormatter == null) throw new ArgumentNullException("messageFormatter");
             if (workItemRepositoryProvider == null) throw new ArgumentNullException("workItemRepositoryProvider");
             if (clients == null) throw new ArgumentNullException("clients");
@@ -31,6 +26,11 @@ namespace BackgroundWorkers
             _workItemRepositoryProvider = workItemRepositoryProvider;
             _clients = clients;
             _workItemRoute = workItemRoute;
+
+            _counter = new PerformanceCounter(
+                PerformanceCounterConstants.Category,
+                string.Format("{0}/sec", name),
+                false);
         }
 
         public IEnumerable<WorkItem> Prepare(NewWorkItem message)
