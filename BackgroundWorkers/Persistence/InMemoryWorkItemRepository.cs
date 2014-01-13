@@ -31,7 +31,7 @@ namespace BackgroundWorkers.Persistence
             return Items.Where(i => i.Value.RetryOn <= now).Select(i => i.Value);
         }
 
-        public IEnumerable<WorkItem> RunningItems()
+        public IEnumerable<WorkItem> IncompleteItems()
         {
             return Items.Where(i => i.Value.Status <= WorkItemStatus.Running).Select(i => i.Value);
         }
