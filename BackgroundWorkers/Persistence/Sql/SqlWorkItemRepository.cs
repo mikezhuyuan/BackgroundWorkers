@@ -13,7 +13,7 @@ namespace BackgroundWorkers.Persistence.Sql
         readonly Func<DateTime> _now;
         readonly SqlConnection _connection;
 
-        const string Columns = "Id, Type, Message, Queue, Status, Version, CreatedOn, ParentId, RetryOn, DispatchCount, Version as NewVersion";
+        const string Columns = "Id, Type, Message, Queue, Status, Version, CreatedOn, ParentId, RetryOn, DispatchCount, Version as NewVersion, Log";
 
         public SqlWorkItemRepository(string connectionStringName, Func<DateTime> now)
         {
@@ -38,9 +38,9 @@ namespace BackgroundWorkers.Persistence.Sql
         public void Update(WorkItem workItem)
         {
             var count = _connection.Execute("update workitems set " + 
-                "status=@Status, DispatchCount=@DispatchCount, RetryOn=@RetryOn, Version=@NewVersion " + 
+                "status=@Status, DispatchCount=@DispatchCount, RetryOn=@RetryOn, Version=@NewVersion, Log=@Log " + 
                 "where id=@Id and version = @Version",
-                new { workItem.Id, workItem.Status, workItem.DispatchCount, workItem.RetryOn, workItem.Version, workItem.NewVersion });
+                new { workItem.Id, workItem.Status, workItem.DispatchCount, workItem.RetryOn, workItem.Version, workItem.NewVersion, workItem.Log });
 
             if (count == 0)
                 throw new InvalidOperationException(string.Format("Could not update work item: {0}", workItem));
@@ -49,8 +49,8 @@ namespace BackgroundWorkers.Persistence.Sql
         public void Add(WorkItem workItem)
         {
             _connection.Execute(
-                "insert into workitems ([Id], [Type], [Message], [Queue], [Status], [Version], [CreatedOn], [DispatchCount], [ParentId]) " + 
-                "values (@Id, @Type, @Message, @Queue, @Status, @Version, @CreatedOn, @DispatchCount, @ParentId);" +
+                "insert into workitems ([Id], [Type], [Message], [Queue], [Status], [Version], [CreatedOn], [DispatchCount], [ParentId], [Log]) " + 
+                "values (@Id, @Type, @Message, @Queue, @Status, @Version, @CreatedOn, @DispatchCount, @ParentId, @Log);" +
                 "select cast(scope_identity() as int)",
                 new
                 {
@@ -62,7 +62,8 @@ namespace BackgroundWorkers.Persistence.Sql
                     workItem.Version,
                     workItem.DispatchCount,
                     workItem.CreatedOn,
-                    workItem.ParentId
+                    workItem.ParentId,
+                    workItem.Log
                 });
         }
 

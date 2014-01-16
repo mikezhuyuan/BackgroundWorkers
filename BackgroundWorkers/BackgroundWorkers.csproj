@@ -96,6 +96,7 @@
     <Compile Include="WorkItemDispatcherException.cs" />
     <Compile Include="NewWorkItemDispatcher.cs" />
     <Compile Include="WorkItemDispatcherFactory.cs" />
+    <Compile Include="WorkItemLog.cs" />
     <Compile Include="WorkItemQueueClient.cs" />
     <Compile Include="WorkItemRoute.cs" />
   </ItemGroup>

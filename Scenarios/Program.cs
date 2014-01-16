@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Transactions;
 using Autofac;
@@ -28,7 +25,7 @@ namespace Scenarios
                     {
                         c.RetryCount = 2;
                         c.MaxWorkers = 10;
-                        c.ListenTo<LongRunningWorkItem>();
+                        c.ListenToAll();
                     });
             
             config.CreatePerformanceCounters();
@@ -37,6 +34,7 @@ namespace Scenarios
             using (var scope = new TransactionScope())
             {
                 WorkersConfiguration.Current.CreateClient().Enqueue(new LongRunningWorkItem());
+                WorkersConfiguration.Current.CreateClient().Enqueue(new FailingWorkItem());
                 scope.Complete();
             }
             Console.ReadLine();
@@ -45,12 +43,19 @@ namespace Scenarios
         static ILifetimeScope BuildContainer()
         {
             var builder = new ContainerBuilder();
-            builder.RegisterType<LongRunningWorkItemHandler>().As<IHandler<LongRunningWorkItem>>();            
+            builder.RegisterType<LongRunningWorkItemHandler>().As<IHandler<LongRunningWorkItem>>();
+            builder.RegisterType<FailingWorkItemHandler>().As<IHandler<FailingWorkItem>>();
+            builder.RegisterType<FailingWorkItemFaultHandler>().As<IHandleFault<FailingWorkItem>>();
             return builder.Build();
         }
     }
 
     public class LongRunningWorkItem
+    {
+        
+    }
+
+    public class FailingWorkItem
     {
         
     }
@@ -62,6 +67,22 @@ namespace Scenarios
             await Task.Delay(TimeSpan.FromMinutes(1));
             Console.WriteLine("Long running work is complete");
             NewWorkItems.Add(new LongRunningWorkItem());
+        }
+    }
+
+    public class FailingWorkItemHandler : Handler<FailingWorkItem>
+    {
+        public override Task Run(FailingWorkItem message)
+        {
+            throw new Exception("This is not working");
+        }
+    }
+
+    public class FailingWorkItemFaultHandler : IHandleFault<FailingWorkItem>
+    {
+        public void Run(FailingWorkItem message, string log)
+        {
+            Console.WriteLine(log);
         }
     }
 }

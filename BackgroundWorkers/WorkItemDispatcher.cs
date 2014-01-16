@@ -106,7 +106,7 @@ namespace BackgroundWorkers
                     if (e.IsFatal())
                         throw;
 
-                    _errorHandlingPolicy.RetryOrPoison(workItem);
+                    _errorHandlingPolicy.RetryOrPoison(workItem, e);
                     _logger.Exception(e);
                 }
                 finally

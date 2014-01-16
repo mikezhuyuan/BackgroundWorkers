@@ -60,6 +60,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestQueue.cs" />
     <Compile Include="WorkItemFacts.cs" />
+    <Compile Include="WorkItemLogFacts.cs" />
     <Compile Include="WorkItemRouteFacts.cs" />
   </ItemGroup>
   <ItemGroup>

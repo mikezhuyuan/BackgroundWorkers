@@ -67,7 +67,7 @@ namespace BackgroundWorkers
                 if (handler != null)
                 {
                     var method = handler.GetType().GetMethod("Run");
-                    method.Invoke(handler, new[] { body });
+                    method.Invoke(handler, new[] { body, wi.Log });
                 }
 
                 yield return wi;

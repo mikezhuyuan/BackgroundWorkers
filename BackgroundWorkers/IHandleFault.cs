@@ -2,6 +2,6 @@
 {   
     public interface IHandleFault<in T>
     {
-        void Run(T message);
+        void Run(T message, string log);
     }
 }

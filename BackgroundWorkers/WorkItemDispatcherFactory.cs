@@ -23,8 +23,9 @@ namespace BackgroundWorkers
                 _configuration.Now);
 
             var errorHandlingPolicy = new ErrorHandlingPolicy(
-                MsmqHelpers.CreateQueue<Guid>(_configuration.PoisonedWorkItemQueue),
+                MsmqHelpers.CreateQueue<Guid>(_configuration.PoisonedWorkItemQueue),                
                 _configuration.WorkItemRepositoryProvider,
+                new WorkItemLog(_configuration.MessageFormatter),
                 _configuration.Now,
                 _configuration.Logger,
                 _queueConfiguration.RetryCount,

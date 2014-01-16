@@ -7,13 +7,14 @@ namespace BackgroundWorkers
     public interface IErrorHandlingPolicy : IDisposable
     {
         bool Poison(WorkItem workItem);
-        void RetryOrPoison(WorkItem workItem);
+        void RetryOrPoison(WorkItem workItem, Exception exception);
     }
 
     public class ErrorHandlingPolicy : IErrorHandlingPolicy
     {
         readonly ISendMessage<Guid> _poisonedQueue;
         readonly IWorkItemRepositoryProvider _workItemRepositoryProvider;
+        readonly IWorkItemLog _workItemLog;
         readonly Func<DateTime> _now;
         readonly ILogger _logger;
         readonly int _retryCount;
@@ -21,6 +22,7 @@ namespace BackgroundWorkers
 
         public ErrorHandlingPolicy(ISendMessage<Guid> poisonedQueue, 
             IWorkItemRepositoryProvider workItemRepositoryProvider, 
+            IWorkItemLog workItemLog,
             Func<DateTime> now, 
             ILogger logger, 
             int retryCount, 
@@ -28,11 +30,13 @@ namespace BackgroundWorkers
         {
             if (poisonedQueue == null) throw new ArgumentNullException("poisonedQueue");
             if (workItemRepositoryProvider == null) throw new ArgumentNullException("workItemRepositoryProvider");
+            if (workItemLog == null) throw new ArgumentNullException("workItemLog");
             if (now == null) throw new ArgumentNullException("now");
             if (logger == null) throw new ArgumentNullException("logger");
 
             _poisonedQueue = poisonedQueue;
             _workItemRepositoryProvider = workItemRepositoryProvider;
+            _workItemLog = workItemLog;
             _now = now;
             _logger = logger;
             _retryCount = retryCount;
@@ -48,10 +52,15 @@ namespace BackgroundWorkers
             return true;
         }
 
-        public void RetryOrPoison(WorkItem workItem)
+        public void RetryOrPoison(WorkItem workItem, Exception exception)
         {
+            if (workItem == null) throw new ArgumentNullException("workItem");
+            if (exception == null) throw new ArgumentNullException("exception");
+
             try
             {
+                _workItemLog.WriteException(workItem, exception);
+
                 if (CanRetry(workItem))
                 {
                     Retry(workItem);
@@ -67,7 +76,7 @@ namespace BackgroundWorkers
                     throw;
 
                 _logger.Exception(e);                
-            }            
+            }
         }
 
         bool CanRetry(WorkItem workItem)

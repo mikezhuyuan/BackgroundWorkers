@@ -15,6 +15,7 @@ BEGIN
 		[DispatchCount] int NOT NULL,
 		[RetryOn] [datetime] NULL,
 		[ParentId] [uniqueidentifier] NULL,
+		[Log] [nvarchar](max) NULL
 
 	CONSTRAINT [PK_dbo.WorkItems] PRIMARY KEY CLUSTERED 
 	(

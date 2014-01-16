@@ -61,7 +61,7 @@ namespace BackgroundWorkers.Tests
 
                 _workItem.Running();
 
-                f.Subject.RetryOrPoison(_workItem);
+                f.Subject.RetryOrPoison(_workItem, new Exception());
 
                 Assert.Equal(WorkItemStatus.Failed, _workItem.Status);
                 f.WorkItemRepository.Received().Update(_workItem);
@@ -75,11 +75,43 @@ namespace BackgroundWorkers.Tests
 
                 _workItem.Running();
 
-                f.Subject.RetryOrPoison(_workItem);
+                f.Subject.RetryOrPoison(_workItem, new Exception());
 
                 Assert.Equal(WorkItemStatus.Poisoned, _workItem.Status);
                 f.WorkItemRepository.Received(1).Update(_workItem);
                 Assert.Equal(null, _workItem.RetryOn);
+            }
+
+            [Fact]
+            public void InvokesWorkItemLogForPoisoned()
+            {
+                var f = new ErrorHandlingPolicyFixture();
+                _workItem.Running();
+
+                var e = new Exception();
+
+                f.Subject.RetryOrPoison(_workItem, e);
+
+                f.WorkItemLog.Received(1).WriteException(_workItem, e);
+
+            }
+
+            [Fact]
+            public void InvokesWorkItemLogForNonPoisoned()
+            {
+                var f = new ErrorHandlingPolicyFixture
+                {
+                    RetryCount = 1
+                };
+
+                _workItem.Running();
+
+                var e = new Exception();
+
+                f.Subject.RetryOrPoison(_workItem, e);
+
+                f.WorkItemLog.Received(1).WriteException(_workItem, e);
+
             }
 
             [Theory]
@@ -99,7 +131,7 @@ namespace BackgroundWorkers.Tests
 
                 _workItem.Running();
 
-                f.Subject.RetryOrPoison(_workItem);
+                f.Subject.RetryOrPoison(_workItem, new Exception());
 
                 Assert.Equal(status, _workItem.Status);
 
@@ -121,7 +153,7 @@ namespace BackgroundWorkers.Tests
                 });
 
                 _workItem.Running();
-                Assert.Throws<OutOfMemoryException>(() => f.Subject.RetryOrPoison(_workItem));
+                Assert.Throws<OutOfMemoryException>(() => f.Subject.RetryOrPoison(_workItem, new Exception()));
                
                 Assert.Equal(status, _workItem.Status);
 
@@ -144,6 +176,8 @@ namespace BackgroundWorkers.Tests
 
         public int RetryCount { get; set; }
 
+        public IWorkItemLog WorkItemLog { get; set; }
+
         public TimeSpan RetryDelay { get; set; }
 
         public ErrorHandlingPolicyFixture()
@@ -157,13 +191,14 @@ namespace BackgroundWorkers.Tests
 
             Now = () => Fixture.Now;
             Logger = Substitute.For<ILogger>();
+            WorkItemLog = Substitute.For<IWorkItemLog>();
         }
 
         public ErrorHandlingPolicy Subject
         {
             get
             {
-                return new ErrorHandlingPolicy(PoisonQueue, WorkItemRepositoryProvider, Now, Logger, RetryCount,
+                return new ErrorHandlingPolicy(PoisonQueue, WorkItemRepositoryProvider, WorkItemLog, Now, Logger, RetryCount,
                     RetryDelay);
             }
         }
