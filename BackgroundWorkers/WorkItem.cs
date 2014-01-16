@@ -53,6 +53,8 @@ namespace BackgroundWorkers
 
         public Guid? ParentId { get; private set; }
 
+        public string Log { get; set; }
+
         public bool Running()
         {
             if (Status != WorkItemStatus.Ready)
