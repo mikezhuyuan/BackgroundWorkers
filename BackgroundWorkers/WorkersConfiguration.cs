@@ -21,6 +21,7 @@ namespace BackgroundWorkers
             WorkItemQueues = new Collection<QueueConfiguration>();
             NewWorkItemQueue = new QueueConfiguration("BackgroundWorkersNewWorkItemsQueue");
             PoisonedWorkItemQueue = new QueueConfiguration("BackgroundWorkersPoisonedWorkItemsQueue");
+            RetryClockFrequency = TimeSpan.FromMinutes(1);
         }
 
         public IMessageFormatter MessageFormatter { get; private set; }
@@ -167,7 +168,7 @@ namespace BackgroundWorkers
             return this;
         }
 
-        public WorkersConfiguration WithRetryDelay(TimeSpan delay)
+        public WorkersConfiguration WithRetryClockFrequency(TimeSpan delay)
         {
             RetryClockFrequency = delay;
             return this;
