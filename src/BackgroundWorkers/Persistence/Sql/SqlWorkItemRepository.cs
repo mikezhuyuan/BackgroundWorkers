@@ -35,6 +35,12 @@ namespace BackgroundWorkers.Persistence.Sql
                 .Single();
         }
 
+        public IEnumerable<WorkItem> FindAllByParentId(Guid parentWorkItemId)
+        {
+            return _connection.Query<WorkItem>("select  " + Columns + 
+                " from workitems where ParentId = @ParentId", new {ParentId = parentWorkItemId});
+        }
+
         public void Update(WorkItem workItem)
         {
             var count = _connection.Execute("update workitems set " + 

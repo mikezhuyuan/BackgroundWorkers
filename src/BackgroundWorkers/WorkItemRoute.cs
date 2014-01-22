@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BackgroundWorkers
 {
@@ -11,12 +12,19 @@ namespace BackgroundWorkers
 
     public class WorkItemRoute
     {
+        readonly ISendMessage<Guid> _mergeClient;
         IDictionary<Type, ICollection<ISendMessage<Guid>>> _whiteList = new Dictionary<Type, ICollection<ISendMessage<Guid>>>();
         IDictionary<Type, ICollection<ISendMessage<Guid>>> _blackList = new Dictionary<Type, ICollection<ISendMessage<Guid>>>();
         ICollection<ISendMessage<Guid>> _listenToAllList = new HashSet<ISendMessage<Guid>>();
+        private List<WorkItemRouteData> routeTable;
+        private QueueConfiguration queueConfiguration;
 
-        public WorkItemRoute(IEnumerable<WorkItemRouteData> routeTable)
+        public WorkItemRoute(IEnumerable<WorkItemRouteData> routeTable, ISendMessage<Guid> mergeClient)
         {
+            if (routeTable == null) throw new ArgumentNullException("routeTable");
+            if (mergeClient == null) throw new ArgumentNullException("mergeClient");
+
+            _mergeClient = mergeClient;
             foreach (var route in routeTable)
             {
                 if (route.Config.IsListenToAll)
@@ -44,10 +52,15 @@ namespace BackgroundWorkers
                     _blackList[type].Add(route.Client);
                 }
             }
-        } 
+        }
 
         public IEnumerable<ISendMessage<Guid>> GetRouteTargets(Type messageType)
         {
+            if (messageType == typeof (MergeableMessage))
+            {
+                return new[] {_mergeClient};
+            }
+
             var result = new HashSet<ISendMessage<Guid>>(_listenToAllList);
 
             if (_whiteList.ContainsKey(messageType))

@@ -27,7 +27,11 @@ namespace BackgroundWorkers
                 clients.Add(client);
             }
 
-            var route = new WorkItemRoute(routeTable);
+            
+            var mergeClient = MsmqHelpers.CreateQueue<Guid>(_configuration.MergeableWorkItemQueue);
+            clients.Add(mergeClient);
+
+            var route = new WorkItemRoute(routeTable, mergeClient);
 
             return new NewWorkItemDispatcher(_configuration.NewWorkItemQueue.Name, 
                 _configuration.MessageFormatter, _configuration.WorkItemRepositoryProvider,

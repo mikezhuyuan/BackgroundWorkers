@@ -9,23 +9,27 @@ namespace BackgroundWorkers
     {
         readonly IEnumerable<IListenToQueue> _workItemDispatchers;
         readonly IListenToQueue _poisonedWorkItemDispatcher;
+        readonly IListenToQueue _mergeableWorkItemDispatcher;
         readonly IListenToQueue _workItemQueue;
         readonly IRetryClock _retryClock;
         readonly IIncompleteWork _incompleteWork;
 
         public WorkersHost(IEnumerable<IListenToQueue> workItemDispatchers,
-            IListenToQueue workItemQueue, 
-            IListenToQueue poisonedWorkItemDispatcher, 
+            IListenToQueue workItemQueue,
+            IListenToQueue poisonedWorkItemDispatcher,
+            IListenToQueue mergeableWorkItemDispatcher, 
             IRetryClock retryClock, 
             IIncompleteWork incompleteWork)
         {
             if (workItemDispatchers == null) throw new ArgumentNullException("workItemDispatchers");
             if (poisonedWorkItemDispatcher == null) throw new ArgumentNullException("poisonedWorkItemDispatcher");
+            if (mergeableWorkItemDispatcher == null) throw new ArgumentNullException("mergeableWorkItemDispatcher");
             if (workItemQueue == null) throw new ArgumentNullException("workItemQueue");
             if (incompleteWork == null) throw new ArgumentNullException("incompleteWork");
 
             _workItemDispatchers = workItemDispatchers;
             _poisonedWorkItemDispatcher = poisonedWorkItemDispatcher;
+            _mergeableWorkItemDispatcher = mergeableWorkItemDispatcher;
             _workItemQueue = workItemQueue;
             _retryClock = retryClock;
             _incompleteWork = incompleteWork;
@@ -33,7 +37,7 @@ namespace BackgroundWorkers
 
         public async void Start()
         {
-            var listeners = _workItemDispatchers.Union(new[] { _workItemQueue, _poisonedWorkItemDispatcher });
+            var listeners = _workItemDispatchers.Union(new[] { _workItemQueue, _poisonedWorkItemDispatcher, _mergeableWorkItemDispatcher });
             _incompleteWork.Requeue();
 
             var tasks = listeners.Select(l => Task.Factory.StartNew(() => l.Start()))

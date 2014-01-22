@@ -7,6 +7,8 @@ namespace BackgroundWorkers.Persistence
     {
         WorkItem Find(Guid workItemId);
 
+        IEnumerable<WorkItem> FindAllByParentId(Guid parentWorkItemId);
+
         void Update(WorkItem workItem);
 
         void Add(WorkItem workItem);

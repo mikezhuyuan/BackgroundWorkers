@@ -90,16 +90,25 @@ namespace BackgroundWorkers
             {
                 try
                 {
-                    var t = typeof (IHandler<>);
+                    if (message.GetType() == typeof (MergeableMessage))
+                    {
+                        var handler = new MergeableMessageHandler(_workItemRepoitoryProvider, _messageFormatter);
+                        await handler.Run((MergeableMessage)message, workItem);
+                        Complete(workItem, handler, message);
+                    }
+                    else
+                    {
+                        var t = typeof (IHandler<>);
 
-                    var handlerType = t.MakeGenericType(message.GetType());
-                    var mi = handlerType.GetMethod("Run");
+                        var handlerType = t.MakeGenericType(message.GetType());
+                        var mi = handlerType.GetMethod("Run");
 
-                    var handler = scope.GetService(handlerType);
+                        var handler = scope.GetService(handlerType);
 
-                    await (Task) mi.Invoke(handler, new[] {message});
+                        await (Task) mi.Invoke(handler, new[] {message});
 
-                    Complete(workItem, handler, message);
+                        Complete(workItem, handler, message);
+                    }
                 }
                 catch (Exception e)
                 {

@@ -63,6 +63,9 @@
     <Compile Include="IncompleteWork.cs" />
     <Compile Include="ISendMessage.cs" />
     <Compile Include="IListenToQueue.cs" />
+    <Compile Include="MergeableMessage.cs" />
+    <Compile Include="MergeableMessageHandler.cs" />
+    <Compile Include="MergedMessage.cs" />
     <Compile Include="MsmqHelpers.cs" />
     <Compile Include="MsmqListener.cs" />
     <Compile Include="MsmqQueue.cs" />

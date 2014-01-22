@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -13,28 +14,31 @@ namespace Scenarios
     {
         static void Main(string[] args)
         {
-            
+
             WorkItemsTable.Create(ConfigurationManager.ConnectionStrings["Scenarios"].ConnectionString);
 
             var config = WorkersConfiguration.Current
-                    .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
-                    .UseWorkItemRepositoryProvider(new SqlWorkItemRepositoryProvider("Scenarios", () => DateTime.Now))
-                    .UseNewWorkItemsQueueName("Scenarios.NewWorkItems")
-                    .UsePoisonedWorkItemsQueueName("Scenarios.PoisonedWorkItems")
-                    .WithQueue("Scenarios", c =>
-                    {
-                        c.RetryCount = 2;
-                        c.MaxWorkers = 10;
-                        c.ListenToAll();
-                    });
-            
+                .UseDependencyResolver(new AutofacDependencyResolver(BuildContainer()))
+                .UseWorkItemRepositoryProvider(new SqlWorkItemRepositoryProvider("Scenarios", () => DateTime.Now))
+                .UseNewWorkItemsQueueName("Scenarios.NewWorkItems")
+                .UsePoisonedWorkItemsQueueName("Scenarios.PoisonedWorkItems")
+                .UseMergeableWorkItemQueueName("Scenarios.MergeableWorkItems")
+                .WithQueue("Scenarios", c =>
+                {
+                    c.RetryCount = 2;
+                    c.MaxWorkers = 10;
+                    c.ListenToAll();
+                });
+
             config.CreatePerformanceCounters();
             config.CreateHost().Start();
 
             using (var scope = new TransactionScope())
             {
-                WorkersConfiguration.Current.CreateClient().Enqueue(new LongRunningWorkItem());
-                WorkersConfiguration.Current.CreateClient().Enqueue(new FailingWorkItem());
+                WorkersConfiguration.Current.CreateClient().Enqueue(new ItemsMessage
+                {
+                    Items = new[] {1,2,3}
+                });
                 scope.Complete();
             }
             Console.ReadLine();
@@ -43,46 +47,51 @@ namespace Scenarios
         static ILifetimeScope BuildContainer()
         {
             var builder = new ContainerBuilder();
-            builder.RegisterType<LongRunningWorkItemHandler>().As<IHandler<LongRunningWorkItem>>();
-            builder.RegisterType<FailingWorkItemHandler>().As<IHandler<FailingWorkItem>>();
-            builder.RegisterType<FailingWorkItemFaultHandler>().As<IHandleFault<FailingWorkItem>>();
+            builder.RegisterType<ItemsHandler>().As<IHandler<ItemsMessage>>();
+            builder.RegisterType<MergedItemsHandler>().As<IHandler<MergedMessages<ItemMessage>>>();
             return builder.Build();
         }
     }
 
-    public class LongRunningWorkItem
+    public class ItemsMessage
+    {
+        public int[] Items { get; set; }
+    }
+
+    public class ItemMessage
+    {
+        public int Item { get; set; }
+    }
+
+    public class MergedItemsMessage : MergedMessages<ItemMessage>
     {
         
     }
 
-    public class FailingWorkItem
+    public class ItemsHandler : ForkHandler<ItemsMessage, ItemMessage>
     {
-        
-    }
-
-    public class LongRunningWorkItemHandler : Handler<LongRunningWorkItem>
-    {
-        public override async Task Run(LongRunningWorkItem message)
+        public override Task Run(ItemsMessage message)
         {
-            await Task.Delay(TimeSpan.FromMinutes(1));
-            Console.WriteLine("Long running work is complete");
-            NewWorkItems.Add(new LongRunningWorkItem());
+            foreach (var itm in message.Items)
+            {
+                ForkNewWork(new ItemMessage {Item = itm});
+            }
+
+            return Task.FromResult((object) null);
         }
     }
 
-    public class FailingWorkItemHandler : Handler<FailingWorkItem>
+    public class MergedItemsHandler : Handler<MergedMessages<ItemMessage>>
     {
-        public override Task Run(FailingWorkItem message)
+        public override Task Run(MergedMessages<ItemMessage> merged)
         {
-            throw new Exception("This is not working");
-        }
-    }
+            foreach (var itm in (IEnumerable<object>)merged.Messages)
+            {
+                var m = (ItemMessage) itm;
+                Console.WriteLine(m.Item);
+            }
 
-    public class FailingWorkItemFaultHandler : IHandleFault<FailingWorkItem>
-    {
-        public void Run(FailingWorkItem message, string log)
-        {
-            Console.WriteLine(log);
+            return Task.FromResult((object)null);
         }
     }
 }

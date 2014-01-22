@@ -25,4 +25,19 @@ namespace BackgroundWorkers
         {
         }
     }
+
+    public abstract class ForkHandler<TIn, TOut> : Handler<TIn>
+        where TIn : class
+        where TOut : class
+    {
+        protected ForkHandler() : base()
+        {
+            
+        }
+
+        public void ForkNewWork(TOut message)
+        {
+            base.NewWorkItems.Add(new MergeableMessage {Body = message});
+        }
+    }
 }

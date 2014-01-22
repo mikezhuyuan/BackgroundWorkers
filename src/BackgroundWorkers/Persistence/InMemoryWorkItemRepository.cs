@@ -16,6 +16,11 @@ namespace BackgroundWorkers.Persistence
             return item;
         }
 
+        public IEnumerable<WorkItem> FindAllByParentId(Guid parentWorkItemId)
+        {
+            return Items.Values.Where(i => i.ParentId == parentWorkItemId);
+        }
+
         public void Update(WorkItem workItem)
         {
         }

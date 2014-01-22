@@ -21,6 +21,7 @@ namespace BackgroundWorkers
             WorkItemQueues = new Collection<QueueConfiguration>();
             NewWorkItemQueue = new QueueConfiguration("BackgroundWorkersNewWorkItemsQueue");
             PoisonedWorkItemQueue = new QueueConfiguration("BackgroundWorkersPoisonedWorkItemsQueue");
+            MergeableWorkItemQueue = new QueueConfiguration("BackgroundWorkersMergeableWorkItemsQueue");
             RetryClockFrequency = TimeSpan.FromMinutes(1);
         }
 
@@ -40,11 +41,16 @@ namespace BackgroundWorkers
 
         public QueueConfiguration PoisonedWorkItemQueue { get; private set; }
 
+        public QueueConfiguration MergeableWorkItemQueue { get; private set; }
+
         public TimeSpan RetryClockFrequency { get; set; }
 
         public WorkersHost CreateHost()
         {
-            EnsureQueues(WorkItemQueues.Select(q => q.Name).Concat(new[] { NewWorkItemQueue.Name, PoisonedWorkItemQueue.Name }));
+            EnsureQueues(WorkItemQueues.Select(q => q.Name).Concat(new[] { NewWorkItemQueue.Name, PoisonedWorkItemQueue.Name, MergeableWorkItemQueue.Name }));
+
+            MergeableWorkItemQueue.RetryCount = 1;
+            MergeableWorkItemQueue.MaxWorkers = 1;
 
             var widFactories = WorkItemQueues.ToDictionary(qc => qc, qc => new WorkItemDispatcherFactory(this, qc));
             var nwidFactory = new NewWorkItemDispatcherFactory(this);
@@ -56,6 +62,7 @@ namespace BackgroundWorkers
                 WorkItemQueues.Select(q => new MsmqListener<Guid>(q.Name, MsmqHelpers.CreateNativeQueue(q), widFactories[q].Create, Logger, q.MaxWorkers)),
                 new MsmqListener<NewWorkItem>(NewWorkItemQueue.Name, MsmqHelpers.CreateNativeQueue(NewWorkItemQueue), nwidFactory.Create, Logger, NewWorkItemQueue.MaxWorkers),
                 new MsmqListener<Guid>(PoisonedWorkItemQueue.Name, MsmqHelpers.CreateNativeQueue(PoisonedWorkItemQueue), pwidFactory.Create, Logger, PoisonedWorkItemQueue.MaxWorkers),
+                new MsmqListener<Guid>(MergeableWorkItemQueue.Name, MsmqHelpers.CreateNativeQueue(MergeableWorkItemQueue), new WorkItemDispatcherFactory(this, MergeableWorkItemQueue).Create, Logger, 1),
                 new RetryClock(RetryClockFrequency, Logger, WorkItemRepositoryProvider, Now, clients),
                 new IncompleteWork(WorkItemRepositoryProvider, clients));
         }
@@ -157,6 +164,12 @@ namespace BackgroundWorkers
         public WorkersConfiguration UsePoisonedWorkItemsQueueName(string name)
         {
             PoisonedWorkItemQueue.Name = name;
+            return this;
+        }
+
+        public WorkersConfiguration UseMergeableWorkItemQueueName(string name)
+        {
+            MergeableWorkItemQueue.Name = name;
             return this;
         }
 
